@@ -1,4 +1,5 @@
 import { Search, Download } from "lucide-react";
+import styles from "./VendorOrdersPage.module.css";
 const orders = [{
   id: "ORD-2847",
   customer: "Priya Sharma",
@@ -54,37 +55,70 @@ const orders = [{
   date: "Mar 09, 2026",
   payment: "Refunded"
 }];
-const statusColors = {
-  Delivered: "bg-green-100 text-green-700",
-  Shipped: "bg-blue-100 text-blue-700",
-  Processing: "bg-amber-100 text-amber-700",
-  Pending: "bg-muted text-muted-foreground",
-  Cancelled: "bg-red-100 text-red-700"
+const getStatusClass = (status) => {
+  switch(status) {
+    case "Delivered":
+      return styles.statusDelivered;
+    case "Shipped":
+      return styles.statusShipped;
+    case "Processing":
+      return styles.statusProcessing;
+    case "Pending":
+      return styles.statusPending;
+    case "Cancelled":
+      return styles.statusCancelled;
+    default:
+      return styles.statusPending;
+  }
 };
-const paymentColors = {
-  Paid: "text-green-700",
-  Pending: "text-amber-600",
-  Refunded: "text-destructive"
+
+const getPaymentClass = (payment) => {
+  switch(payment) {
+    case "Paid":
+      return styles.paymentPaid;
+    case "Pending":
+      return styles.paymentPending;
+    case "Refunded":
+      return styles.paymentRefunded;
+    default:
+      return styles.paymentPending;
+  }
 };
+
+const getSummaryBorderClass = (status) => {
+  switch(status) {
+    case "Pending":
+      return styles.summaryPending;
+    case "Processing":
+      return styles.summaryProcessing;
+    case "Shipped":
+      return styles.summaryShipped;
+    case "Delivered":
+      return styles.summaryDelivered;
+    default:
+      return styles.summaryPending;
+  }
+};
+
 export default function VendorOrdersPage() {
-  return <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">{orders.length} total orders</p>
+  return <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.pageTitle}>Orders</h1>
+          <p className={styles.pageSubtitle}>{orders.length} total orders</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
+        <button className={styles.exportButton}>
           <Download className="h-4 w-4" /> Export CSV
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" placeholder="Search by order ID, customer..." className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+      <div className={styles.filters}>
+        <div className={styles.searchContainer}>
+          <Search className={styles.searchIcon} />
+          <input type="text" placeholder="Search by order ID, customer..." className={styles.searchInput} />
         </div>
-        <select className="px-3 py-2.5 rounded-lg border border-input bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        <select className={styles.statusFilter}>
           <option>All Status</option>
           <option>Pending</option>
           <option>Processing</option>
@@ -95,57 +129,57 @@ export default function VendorOrdersPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className={styles.summaryGrid}>
         {[{
         label: "Pending",
         count: 1,
-        color: "border-l-amber-500"
+        status: "Pending"
       }, {
         label: "Processing",
         count: 1,
-        color: "border-l-blue-500"
+        status: "Processing"
       }, {
         label: "Shipped",
         count: 1,
-        color: "border-l-primary"
+        status: "Shipped"
       }, {
         label: "Delivered",
         count: 2,
-        color: "border-l-green-500"
-      }].map(s => <div key={s.label} className={`bg-card rounded-lg border border-border border-l-4 ${s.color} p-4`}>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className="text-xl font-bold text-foreground mt-1">{s.count}</p>
+        status: "Delivered"
+      }].map(s => <div key={s.label} className={`${styles.summaryCard} ${getSummaryBorderClass(s.status)}`}>
+            <p className={styles.summaryLabel}>{s.label}</p>
+            <p className={styles.summaryCount}>{s.count}</p>
           </div>)}
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      <div className={styles.tableContainer}>
+        <div className={styles.tableWrapper}>
+          <table className={styles.ordersTable}>
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Order</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Product</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Payment</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              <tr className={styles.tableHead}>
+                <th className={styles.tableCell}>Order</th>
+                <th className={styles.tableCell}>Customer</th>
+                <th className={`${styles.tableCell} ${styles.hiddenLg}`}>Product</th>
+                <th className={styles.tableCell}>Amount</th>
+                <th className={`${styles.tableCell} ${styles.hiddenSm}`}>Payment</th>
+                <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Date</th>
+                <th className={styles.tableCell}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map(o => <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer">
-                  <td className="p-4 text-sm font-mono font-medium text-primary">{o.id}</td>
-                  <td className="p-4">
-                    <p className="text-sm font-medium text-foreground">{o.customer}</p>
-                    <p className="text-xs text-muted-foreground">{o.email}</p>
+              {orders.map(o => <tr key={o.id} className="tableBody tr">
+                  <td className={`${styles.tableCell} ${styles.orderId}`}>{o.id}</td>
+                  <td className={styles.tableCell}>
+                    <p className={styles.customerName}>{o.customer}</p>
+                    <p className={styles.customerEmail}>{o.email}</p>
                   </td>
-                  <td className="p-4 text-sm text-muted-foreground hidden lg:table-cell">{o.product}</td>
-                  <td className="p-4 text-sm font-semibold text-foreground">₹{o.amount.toLocaleString()}</td>
-                  <td className={`p-4 text-sm font-medium hidden sm:table-cell ${paymentColors[o.payment]}`}>{o.payment}</td>
-                  <td className="p-4 text-sm text-muted-foreground hidden md:table-cell">{o.date}</td>
-                  <td className="p-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[o.status]}`}>{o.status}</span>
+                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenLg}`}>{o.product}</td>
+                  <td className={`${styles.tableCell} ${styles.amount}`}>Rs{o.amount.toLocaleString()}</td>
+                  <td className={`${styles.tableCell} ${getPaymentClass(o.payment)} ${styles.hiddenSm}`}>{o.payment}</td>
+                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{o.date}</td>
+                  <td className={styles.tableCell}>
+                    <span className={`${styles.statusBadge} ${getStatusClass(o.status)}`}>{o.status}</span>
                   </td>
                 </tr>)}
             </tbody>

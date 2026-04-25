@@ -3,6 +3,7 @@ import { Search, Filter, MoreHorizontal, Mail, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import styles from "./ManageUsersPage.module.css";
 const users = [{
   id: 1,
   name: "Priya Sharma",
@@ -58,17 +59,25 @@ const users = [{
   spent: "₹45,000",
   avatar: "AN"
 }];
-const statusStyle = {
-  Active: "bg-emerald-500/10 text-emerald-600",
-  Suspended: "bg-destructive/10 text-destructive",
-  Inactive: "bg-muted text-muted-foreground"
+const getStatusClass = (status) => {
+  switch(status) {
+    case "Active":
+      return styles.statusActive;
+    case "Suspended":
+      return styles.statusSuspended;
+    case "Inactive":
+      return styles.statusInactive;
+    default:
+      return styles.statusInactive;
+  }
 };
+
 export default function ManageUsersPage() {
   const [search, setSearch] = useState("");
   const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
-  return <div className="space-y-6">
+  return <div className={styles.container}>
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className={styles.summaryGrid}>
         {[{
         label: "Total Users",
         value: "1,250",
@@ -85,68 +94,68 @@ export default function ManageUsersPage() {
         label: "New Today",
         value: "8",
         sub: "+3 vs yesterday"
-      }].map(s => <Card key={s.label} className="border-border/50 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold text-foreground mt-1">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>
+      }].map(s => <Card key={s.label} className={styles.summaryCard}>
+            <CardContent className={styles.summaryCardContent}>
+              <p className={styles.summaryLabel}>{s.label}</p>
+              <p className={styles.summaryValue}>{s.value}</p>
+              <p className={styles.summarySub}>{s.sub}</p>
             </CardContent>
           </Card>)}
       </div>
 
       {/* Table */}
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <CardTitle className="text-base font-semibold text-foreground">All Users</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 w-56 text-sm" />
+      <Card className={styles.tableCard}>
+        <CardHeader className={styles.tableHeader}>
+          <div className={styles.tableHeaderContentRow}>
+            <CardTitle className={styles.tableTitle}>All Users</CardTitle>
+            <div className={styles.tableActions}>
+              <div className={styles.searchContainer}>
+                <Search className={styles.searchIcon} />
+                <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
               </div>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              <Button variant="outline" size="sm" className={styles.filterButton}>
                 <Filter className="h-3.5 w-3.5" /> Filter
               </Button>
-              <Button size="sm" className="h-9 gap-1.5">
+              <Button size="sm" className={styles.addButton}>
                 <UserPlus className="h-3.5 w-3.5" /> Add User
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className={styles.tableContent}>
+          <div className={styles.tableContainer}>
+            <table className={styles.usersTable}>
               <thead>
-                <tr className="border-y border-border bg-muted/30">
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">User</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Joined</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Orders</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Total Spent</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3"></th>
+                <tr className={styles.tableHead}>
+                  <th className={styles.tableCell}>User</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Joined</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenLg}`}>Orders</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenSm}`}>Total Spent</th>
+                  <th className={styles.tableCell}>Status</th>
+                  <th className={styles.tableCell}></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(u => <tr key={u.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{u.avatar}</div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{u.name}</p>
-                          <p className="text-xs text-muted-foreground">{u.email}</p>
+                {filtered.map(u => <tr key={u.id} className="tableBody tr">
+                    <td className={styles.tableCell}>
+                      <div className={styles.userCell}>
+                        <div className={styles.userAvatar}>{u.avatar}</div>
+                        <div className={styles.userInfo}>
+                          <p className={styles.userName}>{u.name}</p>
+                          <p className={styles.userEmail}>{u.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{u.joined}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-medium hidden lg:table-cell">{u.orders}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-foreground hidden sm:table-cell">{u.spent}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyle[u.status]}`}>{u.status}</span>
+                    <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{u.joined}</td>
+                    <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenLg}`}>{u.orders}</td>
+                    <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenSm}`}>{u.spent}</td>
+                    <td className={styles.tableCell}>
+                      <span className={`${styles.statusBadge} ${getStatusClass(u.status)}`}>{u.status}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Mail className="h-4 w-4" /></button>
-                        <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><MoreHorizontal className="h-4 w-4" /></button>
+                    <td className={styles.tableCell}>
+                      <div className={styles.actionCell}>
+                        <button className={styles.actionButton}><Mail className="h-4 w-4" /></button>
+                        <button className={styles.actionButton}><MoreHorizontal className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>)}

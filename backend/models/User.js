@@ -5,7 +5,9 @@ const userSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      required: [true, "Please add a user name"],
+      required: function () {
+        return this.role !== "vendor";
+      },
       unique: true,
       trim: true,
       minlength: 3,
@@ -47,18 +49,36 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    firstName: {
+      type: String,
+      required: [true, "Please add your first name"],
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: function () {
+        return this.role !== "vendor";
+      },
+      trim: true,
+    },
     phone: {
       type: String,
       minlength: 10,
       maxlength: 10,
     },
+    dob: {
+      type: Date,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+    },
     address: {
-      doorno: String,
-      street: String,
+      fullAddress: String,
       city: String,
       state: String,
       pincode: String,
-      country: String,
+      country: { type: String, default: "India" },
     },
     wishlist: [
       {

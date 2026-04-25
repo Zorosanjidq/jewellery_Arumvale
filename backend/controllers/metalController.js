@@ -15,7 +15,7 @@ export const getMetalPrices = async (req, res) => {
 
   try {
     const response = await axios.get(
-      // "https://api.metalpriceapi.com/v1/latest",
+      "https://api.metalpriceapi.com/v1/latest",
       {
         params: {
           api_key: process.env.METAL_API_KEY,

@@ -45,11 +45,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   //   REGISTER
-  const signup = async (email, password, name, role) => {
+  const signup = async (formData) => {
     try {
       const res = await axios.post(
         "http://localhost:5000/api/auth/register",
-        { email, password, name, role },
+        formData,
         { withCredentials: true }
       );
 

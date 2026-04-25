@@ -19,7 +19,7 @@ export const createProduct = async (req, res) => {
       hallmark,
       sku,
       tags,
-      status = "draft",
+      status,
     } = req.body || {};
 
     // Validate required fields
@@ -46,8 +46,11 @@ export const createProduct = async (req, res) => {
     }
 
     // Process images from uploaded files
+    const vendorId = req.user ? req.user._id : "temp";
     const images = req.files
-      ? req.files.map((file) => `/uploads/products/${file.filename}`)
+      ? req.files.map(
+          (file) => `/uploads/products/${vendorId}/${file.filename}`,
+        )
       : [];
 
     if (images.length === 0) {
@@ -87,8 +90,7 @@ export const createProduct = async (req, res) => {
       message: "Product created successfully",
       product: populatedProduct,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Create product error:", error);
     res.status(500).json({ message: error.message });
   }
@@ -238,8 +240,9 @@ export const updateProduct = async (req, res) => {
 
     // Process new images if uploaded
     if (req.files && req.files.length > 0) {
+      const vendorId = req.user ? req.user._id : "temp";
       const newImages = req.files.map(
-        (file) => `/uploads/products/${file.filename}`,
+        (file) => `/uploads/products/${vendorId}/${file.filename}`,
       );
       updateData.images = [...product.images, ...newImages];
     }
@@ -293,6 +296,12 @@ export const deleteProduct = async (req, res) => {
 // Get current vendor's products (approved vendors only)
 export const getVendorProducts = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
     const { page = 1, limit = 10, status, category, search } = req.query;
 
     // Build filter
@@ -337,9 +346,9 @@ export const getVendorProducts = async (req, res) => {
 // Remove product image
 export const removeProductImage = async (req, res) => {
   try {
-    const { productId, imageUrl } = req.params;
+    const { Id, imageUrl } = req.params;
 
-    const product = await Product.findById(productId);
+    const product = await Product.findById(Id);
 
     if (!product || product.isDeleted) {
       return res.status(404).json({ message: "Product not found" });

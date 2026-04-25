@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, PlusCircle, Package, ShoppingBag, Warehouse, TrendingUp, ChevronLeft, Store, Bell, Search, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import styles from "./VendorLayout.module.css";
 const navItems = [{
   label: "Dashboard",
   path: "/vendor",
@@ -41,24 +42,27 @@ export default function VendorLayout() {
     user,
     logout
   } = useAuth();
-  return <div className="min-h-screen flex bg-muted/30">
+  return <div className={styles.layout}>
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-[260px] flex-col bg-luxury-black text-cream border-r border-sidebar-border fixed h-screen z-40">
+      <aside className={styles.sidebar}>
         {/* Brand */}
-        <div className="p-5 border-b border-sidebar-border">
+        <div className={styles.sidebarHeader}>
           <div className="flex items-center gap-3 mb-4">
             <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
               <Store className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-display text-lg font-semibold text-primary">GoldVault</h2>
-              <p className="text-[11px] text-sidebar-foreground/50">Seller Dashboard</p>
+              <h2 className="font-display text-lg font-bold text-primary">Vendor Hub</h2>
+              <p className="text-xs text-muted-foreground">Shop Management</p>
             </div>
           </div>
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to Store
+          </Link>
         </div>
 
         {/* Vendor Profile Card */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className={styles.sidebarProfile}>
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold text-primary">
               {user?.username?.[0]?.toUpperCase() || "V"}
@@ -72,40 +76,40 @@ export default function VendorLayout() {
         </div>
 
         {/* Main Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/30 font-semibold px-3 pt-2 pb-1.5">Main Menu</p>
+        <nav className={styles.sidebarNav}>
+          <p className={styles.navSectionTitle}>Main Menu</p>
           {navItems.map(item => {
           const active = location.pathname === item.path;
-          return <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${active ? "bg-primary/15 text-primary shadow-sm" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"}`}>
-                <item.icon className={`h-4 w-4 ${active ? "text-primary" : ""}`} />
+          return <Link key={item.path} to={item.path} className={`${styles.navItem} ${active ? styles.active : ''}`}>
+                <item.icon className={styles.navIcon} />
                 {item.label}
                 {item.label === "Orders" && <span className="ml-auto text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold">3</span>}
               </Link>;
         })}
 
           <div className="my-3 border-t border-sidebar-border" />
-          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/30 font-semibold px-3 pt-1 pb-1.5">Support</p>
-          {bottomNav.map(item => <Link key={item.path} to={item.path} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
-              <item.icon className="h-4 w-4" />
+          <p className={styles.navSectionTitle}>Support</p>
+          {bottomNav.map(item => <Link key={item.path} to={item.path} className={styles.navItem}>
+              <item.icon className={styles.navIcon} />
               {item.label}
             </Link>)}
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-sidebar-border space-y-1">
-          <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+        <div className={styles.sidebarFooter}>
+          <Link to="/" className={styles.navItem}>
             <ChevronLeft className="h-4 w-4" /> Back to Store
           </Link>
-          <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-destructive/80 hover:text-destructive hover:bg-destructive/10 transition-colors">
+          <button onClick={logout} className={`${styles.navItem} ${styles.dropdownDestructive}`}>
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col lg:ml-[260px]">
+      <div className={styles.main}>
         {/* Top bar */}
-        <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
+        <header className={styles.header}>
           <div className="flex items-center justify-between px-4 md:px-8 h-16">
             {/* Mobile brand */}
             <div className="lg:hidden flex items-center gap-2">
@@ -122,8 +126,8 @@ export default function VendorLayout() {
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-2">
-              <button className="relative h-9 w-9 rounded-lg border border-border flex items-center justify-center hover:bg-muted transition-colors">
+            <div className={styles.headerActions}>
+              <button className={styles.notificationButton}>
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center font-bold">2</span>
               </button>
@@ -148,7 +152,7 @@ export default function VendorLayout() {
           </nav>
         </header>
 
-        <main className="flex-1 p-4 md:p-8">
+        <main className={styles.content}>
           <Outlet />
         </main>
       </div>

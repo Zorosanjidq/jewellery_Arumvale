@@ -1,6 +1,8 @@
-import { User, Package, Heart, Settings, MapPin, Bell, ChevronRight, Star, ShoppingBag, GitCompareArrows } from "lucide-react";
+import { User, Package, Heart, Settings, MapPin, Bell, ChevronRight, Star, ShoppingBag, GitCompareArrows, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { products } from "@/data/mockData";
+import { useAuth } from "@/context/AuthContext";
 const recentOrders = [{
   id: "ORD-2841",
   product: "Royal Diamond Necklace",
@@ -42,6 +44,19 @@ const quickLinks = [{
   path: "/profile"
 }];
 export default function ProfilePage() {
+  const { user } = useAuth();
+  const [showPersonalInfo, setShowPersonalInfo] = useState(false);
+  
+  // Format member since date
+  const memberSince = user?.createdAt 
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'Unknown';
+  
+  // Get user location
+  const userLocation = user?.address?.city 
+    ? `${user.address.city}${user.address.state ? ', ' + user.address.state : ''}${user.address.country ? ', ' + user.address.country : ''}`
+    : 'Location not set';
+
   return <div className="container py-10">
       {/* Welcome Header */}
       <div className="bg-luxury-black rounded-2xl p-8 md:p-10 mb-8 relative overflow-hidden">
@@ -53,10 +68,10 @@ export default function ProfilePage() {
             <User className="h-9 w-9 text-primary" />
           </div>
           <div className="flex-1">
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-cream mb-1">Welcome back, Arjun</h1>
-            <p className="text-cream/50 text-sm flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5" /> Mumbai, India · Member since Jan 2025
-            </p>
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-cream mb-1">
+              Welcome back, {user?.firstName || 'User'}
+            </h1>
+           
           </div>
           <div className="flex gap-3">
             <button className="p-2.5 rounded-lg bg-cream/5 text-cream/60 hover:bg-cream/10 hover:text-cream transition-colors">
@@ -67,6 +82,64 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Personal Information Toggle */}
+      <div className="mb-8">
+        <button
+          onClick={() => setShowPersonalInfo(!showPersonalInfo)}
+          className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors"
+        >
+          {showPersonalInfo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          <span className="font-medium text-foreground">
+            {showPersonalInfo ? 'Hide' : 'View'} Personal Information
+          </span>
+        </button>
+        
+        {showPersonalInfo && (
+          <div className="mt-4 bg-card border border-border rounded-xl p-6">
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">Personal Information</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Full Name</p>
+                <p className="font-medium text-foreground">
+                  {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Username</p>
+                <p className="font-medium text-foreground">{user?.username || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Email Address</p>
+                <p className="font-medium text-foreground">{user?.email || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
+                <p className="font-medium text-foreground">{user?.phone || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Date of Birth</p>
+                <p className="font-medium text-foreground">
+                  {user?.dob ? new Date(user.dob).toLocaleDateString() : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Gender</p>
+                <p className="font-medium text-foreground capitalize">{user?.gender || 'Not set'}</p>
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-sm text-muted-foreground mb-1">Address</p>
+                <p className="font-medium text-foreground">
+                  {user?.address?.fullAddress || 'Not set'}
+                  {user?.address?.city && `, ${user.address.city}`}
+                  {user?.address?.state && `, ${user.address.state}`}
+                  {user?.address?.pincode && ` - ${user.address.pincode}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats Row */}

@@ -7,6 +7,11 @@ import cookieParser from "cookie-parser";
 import metalRoutes from "./routes/metalRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import vendorRoutes from "./routes/vendorRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 import { serveStaticFiles } from "./utils/uploadConfig.js";
 dotenv.config();
 connectDB();
@@ -28,6 +33,16 @@ app.use("/api/metals", metalRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use("/api/products", productRoutes);
+
+app.use("/api/vendors", vendorRoutes);
+
+app.use("/api/orders", orderRoutes);
+
+app.use("/api/cart", cartRoutes);
+
+app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/analytics", analyticsRoutes);
 
 // Serve static files for uploaded images
 serveStaticFiles(app);

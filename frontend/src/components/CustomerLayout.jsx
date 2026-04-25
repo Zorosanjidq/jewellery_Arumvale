@@ -4,6 +4,7 @@ import { useCompare } from "@/context/CompareContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import styles from "./CustomerLayout.module.css";
 const navItems = [{
   label: "Home",
   path: "/",
@@ -41,18 +42,18 @@ export default function CustomerLayout() {
     await logout();
     navigate("/");
   };
-  return <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold gold-text">Arumvale</span>
+  return <div className={styles.layout}>
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <Link to="/" className={styles.logo}>
+            <span className={styles.logoText}>Arumvale</span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className={styles.navLinks}>
             {navItems.map(item => {
             const active = location.pathname === item.path;
-            return <Link key={item.path} to={item.path} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+            return <Link key={item.path} to={item.path} className={`${styles.navLink} ${active ? styles.active : ''}`}>
                   <item.icon className="h-4 w-4" />
                   {item.label}
                   {item.label === "Compare" && compareItems.length > 0 && <span className="ml-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
@@ -64,7 +65,7 @@ export default function CustomerLayout() {
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${location.pathname === "/profile" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+                <button className={`${styles.navLink} ${location.pathname === "/profile" ? styles.active : ''}`}>
                   <User className="h-4 w-4" />
                   Account
                 </button>
@@ -95,7 +96,7 @@ export default function CustomerLayout() {
                     {user?.role === 'vendor' && (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link to="/vendor/dashboard" className="flex items-center gap-2 cursor-pointer">
+                          <Link to="/vendor" className="flex items-center gap-2 cursor-pointer">
                             <User className="h-4 w-4" /> Vendor Dashboard
                           </Link>
                         </DropdownMenuItem>
@@ -144,16 +145,16 @@ export default function CustomerLayout() {
           </nav>
 
           {/* Mobile menu button */}
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-foreground">
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className={styles.mobileMenuButton}>
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
         {/* Mobile nav */}
-        {mobileMenuOpen && <nav className="md:hidden border-t border-border bg-background p-4 space-y-1">
+        {mobileMenuOpen && <nav className={`${styles.mobileMenu} ${styles.open}`}>
             {navItems.map(item => {
           const active = location.pathname === item.path;
-          return <Link key={item.path} to={item.path} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+          return <Link key={item.path} to={item.path} onClick={() => setMobileMenuOpen(false)} className={`${styles.mobileMenuLink} ${active ? styles.active : ''}`}>
                   <item.icon className="h-4 w-4" />
                   {item.label}
                 </Link>;
@@ -163,13 +164,13 @@ export default function CustomerLayout() {
                     {/* Role-based mobile menu items */}
                     {user?.role === 'user' && (
                       <>
-                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <User className="h-4 w-4" /> My Profile
                         </Link>
-                        <Link to="/orders" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/orders" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <Package className="h-4 w-4" /> My Orders
                         </Link>
-                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <Settings className="h-4 w-4" /> Settings
                         </Link>
                       </>
@@ -177,10 +178,10 @@ export default function CustomerLayout() {
                     
                     {user?.role === 'vendor' && (
                       <>
-                        <Link to="/vendor/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/vendor" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <User className="h-4 w-4" /> Vendor Dashboard
                         </Link>
-                        <Link to="/vendor/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/vendor/profile" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <Settings className="h-4 w-4" /> Settings
                         </Link>
                       </>
@@ -188,23 +189,23 @@ export default function CustomerLayout() {
                     
                     {user?.role === 'admin' && (
                       <>
-                        <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <User className="h-4 w-4" /> Admin Dashboard
                         </Link>
                       </>
                     )}
                     
-                  <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-muted w-full text-left">
+                  <button onClick={handleLogout} className={`${styles.mobileMenuLink} ${styles.dropdownDestructive}`}>
                     <LogOut className="h-4 w-4" /> Sign Out
                   </button>
                 </> : <>
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                     <LogIn className="h-4 w-4" /> Login
                   </Link>
-                  <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                     <UserPlus className="h-4 w-4" /> Register as Customer
                   </Link>
-                  <Link to="/register/vendor" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Link to="/register/vendor" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                     <UserPlus className="h-4 w-4" /> Register as Shop Owner
                   </Link>
                 </>}
@@ -212,13 +213,13 @@ export default function CustomerLayout() {
           </nav>}
       </header>
 
-      <main className="flex-1">
+      <main className={styles.main}>
         <Outlet />
       </main>
 
-      <footer className="border-t border-border bg-luxury-black py-8">
-        <div className="container text-center">
-          <p className="font-display text-lg gold-text mb-2">Arumvale</p>
+      <footer className={styles.footer}>
+        <div className={styles.footerContainer}>
+          <p className={styles.logoText}>Arumvale</p>
           <p className="text-sm text-muted-foreground">Smart Jewellery Comparison Platform © 2026</p>
         </div>
       </footer>

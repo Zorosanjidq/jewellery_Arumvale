@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CompareProvider } from "@/context/CompareContext";
+import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import CustomerLayout from "@/components/CustomerLayout";
 import VendorLayout from "@/components/VendorLayout";
@@ -35,10 +36,11 @@ const queryClient = new QueryClient();
 const App = () => <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-      <CompareProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+        <CartProvider>
+          <CompareProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
           <Routes>
             {/* Customer */}
             <Route element={<CustomerLayout />}>
@@ -80,7 +82,8 @@ const App = () => <QueryClientProvider client={queryClient}>
           </Routes>
         </BrowserRouter>
       </CompareProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>;
+    </CartProvider>
+    </AuthProvider>
+  </TooltipProvider>
+</QueryClientProvider>;
 export default App;

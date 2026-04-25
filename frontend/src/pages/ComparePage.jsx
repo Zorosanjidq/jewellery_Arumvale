@@ -4,6 +4,7 @@ import { Star, Trophy, Award, TrendingUp, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoginPrompt from "@/components/LoginPrompt";
 import { GitCompareArrows } from "lucide-react";
+import styles from "./ComparePage.module.css";
 export default function ComparePage() {
   const {
     compareItems,
@@ -17,9 +18,9 @@ export default function ComparePage() {
     return <LoginPrompt title="Sign In to Compare" description="Log in to use our Smart Jewellery Comparison Engine — compare price, purity, weight & AI value scores side by side." icon={<GitCompareArrows className="h-10 w-10 text-primary" />} />;
   }
   if (compareItems.length < 2) {
-    return <div className="container py-20 text-center">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-4">Smart Jewellery Comparison Engine</h1>
-        <p className="text-muted-foreground mb-8">Select at least 2 products from the <Link to="/products" className="text-primary hover:underline">products page</Link> to compare.</p>
+    return <div className={styles.emptyState}>
+        <h1 className={styles.emptyStateTitle}>Smart Jewellery Comparison Engine</h1>
+        <p className={styles.emptyStateDescription}>Select at least 2 products from the <Link to="/products" className={styles.emptyStateLink}>products page</Link> to compare.</p>
       </div>;
   }
   const bestValue = [...compareItems].sort((a, b) => b.valueScore - a.valueScore)[0];
@@ -55,16 +56,16 @@ export default function ComparePage() {
     const vals = compareItems.map(p => p[key]);
     return type === "max" ? Math.max(...vals) : Math.min(...vals);
   };
-  return <div className="container py-8">
-      <div className="flex items-center justify-between mb-8">
+  return <div className={styles.container}>
+      <div className={styles.header}>
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Smart Jewellery Comparison Engine</h1>
-          <p className="text-muted-foreground mt-1">Comparing {compareItems.length} products</p>
+          <h1 className={styles.headerTitle}>Smart Jewellery Comparison Engine</h1>
+          <p className={styles.headerSubtitle}>Comparing {compareItems.length} products</p>
         </div>
-        <button onClick={clearCompare} className="text-sm text-destructive hover:underline">Clear All</button>
+        <button onClick={clearCompare} className={styles.clearButton}>Clear All</button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className={styles.recommendationsGrid}>
         {[{
         label: "Best Value",
         icon: TrendingUp,
@@ -80,31 +81,31 @@ export default function ComparePage() {
         icon: Trophy,
         product: bestOverall,
         color: "text-primary"
-      }].map(rec => <div key={rec.label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <rec.icon className={`h-6 w-6 ${rec.color}`} />
+      }].map(rec => <div key={rec.label} className={styles.recommendationCard}>
+            <div className={styles.recommendationIcon}>
+              <rec.icon className={rec.color} />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{rec.label}</p>
-              <p className="font-display font-semibold text-foreground">{rec.product.name}</p>
-              <p className="text-xs text-primary">{rec.product.valueScore}/100 Score</p>
+            <div className={styles.recommendationContent}>
+              <p className={styles.recommendationLabel}>{rec.label}</p>
+              <p className={styles.recommendationName}>{rec.product.name}</p>
+              <p className={styles.recommendationScore}>{rec.product.valueScore}/100 Score</p>
             </div>
           </div>)}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      <div className={styles.tableContainer}>
+        <table className={styles.comparisonTable}>
           <thead>
             <tr>
-              <th className="text-left p-4 bg-muted rounded-tl-xl text-sm font-semibold text-foreground w-40">Feature</th>
-              {compareItems.map(product => <th key={product.id} className={`p-4 bg-muted text-center last:rounded-tr-xl ${product.id === bestOverall.id ? "ring-2 ring-primary ring-inset" : ""}`}>
-                  <div className="relative">
-                    <button onClick={() => removeFromCompare(product.id)} className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-xs">
+              <th className={styles.tableHeader}>Feature</th>
+              {compareItems.map(product => <th key={product.id} className={`${styles.productHeader} ${product.id === bestOverall.id ? styles.bestPick : ''}`}>
+                  <div className={styles.productHeaderContent}>
+                    <button onClick={() => removeFromCompare(product.id)} className={styles.removeButton}>
                       <X className="h-3 w-3" />
                     </button>
-                    <img src={product.image} alt={product.name} className="h-16 w-16 rounded-lg object-cover mx-auto mb-2" />
-                    <p className="font-display font-semibold text-sm text-foreground">{product.name}</p>
-                    {product.id === bestOverall.id && <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs">
+                    <img src={product.image} alt={product.name} className={styles.productImage} />
+                    <p className={styles.productName}>{product.name}</p>
+                    {product.id === bestOverall.id && <span className={styles.bestPickBadge}>
                         <Award className="h-3 w-3" /> Best Pick
                       </span>}
                   </div>
@@ -112,15 +113,15 @@ export default function ComparePage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => <tr key={row.label} className={i % 2 === 0 ? "bg-background" : "bg-muted/50"}>
-                <td className="p-4 text-sm font-medium text-foreground">{row.label}</td>
+            {rows.map((row, i) => <tr key={row.label}>
+                <td className={styles.featureCell}>{row.label}</td>
                 {compareItems.map(product => {
               const val = product[row.key];
               const formatted = row.format ? row.format(val) : val;
               const isBest = row.highlight && val === getBest(row.key, row.highlight);
-              return <td key={product.id} className={`p-4 text-center text-sm ${isBest ? "font-bold text-primary" : "text-foreground"} ${product.id === bestOverall.id ? "ring-2 ring-primary ring-inset" : ""}`}>
+              return <td key={product.id} className={`${styles.valueCell} ${isBest ? styles.bestValue : ''} ${product.id === bestOverall.id ? styles.bestPick : ''}`}>
                       {formatted}
-                      {isBest && <span className="ml-1 text-xs">★</span>}
+                      {isBest && <span className={styles.valueStar}>¡</span>}
                     </td>;
             })}
               </tr>)}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import loginBackground from "@/assets/loginbackground.jpg";
+import styles from "./LoginPage.module.css";
 const roles = [{
   key: "user",
   label: "Customer",
@@ -57,73 +58,73 @@ export default function LoginPage() {
     if (selectedRole === "admin") navigate("/admin");else if (selectedRole === "vendor") navigate("/vendor");else navigate("/");
     setLoading(false);
   };
-  return <div className="min-h-screen flex items-center justify-center px-4 py-12 relative" style={{
+  return <div className={styles.loginPage} style={{
       backgroundImage: `url(${loginBackground})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat'
     }}>
-      <div className="absolute inset-0 bg-black/50"></div>
-      <div className="w-full max-w-sm relative z-10">
+      <div className={styles.overlay}></div>
+      <div className={styles.container}>
         {/* Glass Container */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 shadow-2xl">
+        <div className={styles.glassContainer}>
           {/* Header */}
-          <div className="text-center mb-6">
-            <Link to="/" className="inline-block mb-6">
-              <span className="font-display text-2xl font-bold gold-text">Arumvale</span>
+          <div className={styles.header}>
+            <Link to="/" className={styles.logo}>
+              <span className={styles.logoText}>Arumvale</span>
             </Link>
-            <h1 className="font-display text-2xl font-bold text-white">Welcome Back</h1>
-            <p className="text-white/80 text-sm mt-1">Sign in to your account</p>
+            <h1 className={styles.title}>Welcome Back</h1>
+            <p className={styles.subtitle}>Sign in to your account</p>
           </div>
 
           {/* Role Selector */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {roles.map(role => <button key={role.key} onClick={() => setSelectedRole(role.key)} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${selectedRole === role.key ? "border-yellow-400 bg-yellow-400/20 text-yellow-400" : "border-white/20 bg-white/10 text-white/70 hover:border-white/30 hover:bg-white/20"}`}>
-                <role.icon className="h-5 w-5" />
-                <span className="text-xs font-medium">{role.label}</span>
+          <div className={styles.roleSelector}>
+            {roles.map(role => <button key={role.key} onClick={() => setSelectedRole(role.key)} className={`${styles.roleButton} ${selectedRole === role.key ? styles.active : ''}`}>
+                <role.icon className={styles.roleIcon} />
+                <span className={styles.roleLabel}>{role.label}</span>
               </button>)}
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-2xl p-4 space-y-3 shadow-lg">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-800">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <form onSubmit={handleLogin} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Email</label>
+            <div className={styles.inputWrapper}>
+              <Mail className={styles.inputIcon} />
               <Input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="pl-10" required />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-800">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Password</label>
+            <div className={styles.inputWrapper}>
+              <Lock className={styles.inputIcon} />
+              <Input type={showPassword ? "text" : "password"} placeholder="*************" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.passwordToggle}>
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-gray-600">
-              <input type="checkbox" className="rounded border-border" />
+          <div className={styles.formFooter}>
+            <label className={styles.rememberLabel}>
+              <input type="checkbox" className={styles.checkbox} />
               Remember me
             </label>
-            <a href="#" className="text-yellow-600 hover:underline text-xs">Forgot password?</a>
+            <a href="#" className={styles.forgotLink}>Forgot password?</a>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          <button type="submit" disabled={loading} className={styles.submitButton}>
+            {loading ? <Loader2 className={`${styles.spinner} mr-2`} /> : null}
             Sign In as {roles.find(r => r.key === selectedRole)?.label}
-          </Button>
+          </button>
         </form>
 
-        <p className="text-center text-sm text-white/80 mt-6">
+        <p className={styles.footer}>
           Don't have an account?{" "}
-          <Link to="/register" className="text-yellow-400 hover:underline font-medium">Create Account</Link>
+          <Link to="/register" className={styles.footerLink}>Create Account</Link>
           {" · "}
-          <Link to="/register/vendor" className="text-yellow-400 hover:underline font-medium">Register as Shop Owner</Link>
+          <Link to="/register/vendor" className={styles.footerLink}>Register as Shop Owner</Link>
         </p>
         </div>
       </div>

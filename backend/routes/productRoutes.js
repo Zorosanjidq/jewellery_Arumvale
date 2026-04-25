@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   createProduct,
   getProducts,
@@ -10,19 +9,15 @@ import {
   removeProductImage,
 } from "../controllers/productController.js";
 import { protect, approvedVendorOnly } from "../middleware/authMiddleware.js";
+import { uploadProductImages } from "../utils/uploadConfig.js";
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const upload = multer({
-  dest: "uploads/",
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
-});
-
 // Public routes - no authentication required
 router.get("/", getProducts);
+
+// Get vendor's products (approved vendors only) - must come before /:id
+router.get("/my", protect, approvedVendorOnly, getVendorProducts);
 router.get("/:id", getProduct);
 
 // Protected routes - require approved vendor authentication
@@ -30,10 +25,7 @@ router.use(protect);
 router.use(approvedVendorOnly);
 
 // Create product (approved vendors only) - handle multipart/form-data
-router.post("/", upload.array("images", 10), createProduct);
-
-// Get vendor's products (approved vendors only)
-router.get("/my", getVendorProducts);
+router.post("/", uploadProductImages, createProduct);
 
 // Update product (vendor can only update their products)
 router.put("/:id", updateProduct);

@@ -67,7 +67,7 @@ export default function Index() {
           </div>
 
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-cream leading-[1.1] mb-6 max-w-4xl">
-            {isLoggedIn ? <>Welcome Back,<br /><span className="gold-text italic">{user?.name}</span></> : <>Discover, Compare &<br />Choose <span className="gold-text italic">Brilliance</span></>}
+            {isLoggedIn ? <>Welcome Back,<br /><span className="gold-text italic">{user?.username}</span></> : <>Discover, Compare &<br />Choose <span className="gold-text italic">Brilliance</span></>}
           </h1>
 
           <p className="text-cream/60 text-base md:text-lg mb-10 max-w-xl font-light leading-relaxed">
@@ -203,7 +203,7 @@ export default function Index() {
             <span className="h-px w-12 bg-primary/40" />
           </div>
           <h2 className="font-display text-3xl md:text-5xl font-bold text-cream mb-4 leading-tight">
-            Ready to Find Your<br /><span className="gold-text italic">Perfect Piece?</span>
+            Ready to Find Your<br /><span className="gold-text italic mr-3">Perfect Piece?<br /></span>
           </h2>
           <p className="text-cream/50 max-w-xl mx-auto mb-10 font-light">
             {isLoggedIn ? "Explore our curated collection and use our AI-powered comparison engine to find the best value." : "Join thousands of smart buyers who save money and make better jewellery decisions with our AI-powered comparison engine."}

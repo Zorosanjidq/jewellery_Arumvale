@@ -1,7 +1,9 @@
-import { IndianRupee, ShoppingBag, Package, TrendingUp, ArrowUpRight, ArrowDownRight, Eye, Clock, Warehouse } from "lucide-react";
-import { vendorStats, products } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import { IndianRupee, ShoppingBag, Package, TrendingUp, ArrowUpRight, ArrowDownRight, Eye, Clock, Warehouse, Loader2 } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useAuth } from "@/context/AuthContext";
+import axios from "axios";
+import styles from "./VendorDashboard.module.css";
 const recentOrders = [{
   id: "ORD-2847",
   customer: "Priya Sharma",
@@ -38,34 +40,112 @@ const recentOrders = [{
   status: "Delivered",
   date: "Mar 10"
 }];
-const statusColors = {
-  Delivered: "bg-green-100 text-green-700",
-  Shipped: "bg-blue-100 text-blue-700",
-  Processing: "bg-amber-100 text-amber-700",
-  Pending: "bg-muted text-muted-foreground"
+const getStatusClass = (status) => {
+  switch(status) {
+    case "Delivered":
+      return styles.statusDelivered;
+    case "Shipped":
+      return styles.statusShipped;
+    case "Processing":
+      return styles.statusProcessing;
+    case "Pending":
+      return styles.statusPending;
+    default:
+      return styles.statusPending;
+  }
 };
-const topProducts = products.slice(0, 4);
 export default function VendorDashboard() {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      totalSales: 0,
+      totalOrders: 0,
+      totalProducts: 0,
+      conversionRate: 0
+    },
+    monthlySales: [],
+    topProducts: [],
+    recentOrders: []
+  });
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch vendor's products
+      const productsResponse = await axios.get(
+        'http://localhost:5000/api/products/my?limit=100',
+        { withCredentials: true }
+      );
+      
+      const products = productsResponse.data.products || [];
+      const activeProducts = products.filter(p => p.status === 'active');
+      
+      // Calculate stats from real data
+      const stats = {
+        totalSales: activeProducts.reduce((sum, p) => sum + (p.price * p.stock), 0),
+        totalOrders: Math.floor(Math.random() * 50) + 10, // Mock orders for now
+        totalProducts: activeProducts.length,
+        conversionRate: 3.2 // Mock conversion rate for now
+      };
+      
+      // Mock monthly sales data (can be replaced with real analytics API)
+      const monthlySales = [
+        { month: 'Jan', sales: stats.totalSales * 0.1 },
+        { month: 'Feb', sales: stats.totalSales * 0.15 },
+        { month: 'Mar', sales: stats.totalSales * 0.2 },
+        { month: 'Apr', sales: stats.totalSales * 0.18 },
+        { month: 'May', sales: stats.totalSales * 0.22 },
+        { month: 'Jun', sales: stats.totalSales * 0.15 }
+      ];
+      
+      setDashboardData({
+        stats,
+        monthlySales,
+        topProducts: activeProducts.slice(0, 4),
+        recentOrders: [] // Mock orders for now
+      });
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <Loader2 className="animate-spin" />
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   const stats = [{
     title: "Total Revenue",
-    value: `₹${(vendorStats.totalSales / 100000).toFixed(1)}L`,
+    value: `Rs${(dashboardData.stats.totalSales / 100000).toFixed(1)}L`,
     icon: IndianRupee,
     trend: "+12.5%",
     up: true,
     sub: "vs last month"
   }, {
     title: "Total Orders",
-    value: String(vendorStats.totalOrders),
+    value: String(dashboardData.stats.totalOrders),
     icon: ShoppingBag,
     trend: "+8.2%",
     up: true,
     sub: "vs last month"
   }, {
     title: "Active Products",
-    value: String(vendorStats.totalProducts),
+    value: String(dashboardData.stats.totalProducts),
     icon: Package,
     trend: "+3",
     up: true,
@@ -78,17 +158,17 @@ export default function VendorDashboard() {
     up: false,
     sub: "vs last month"
   }];
-  return <div className="space-y-6">
+  return <div className={styles.container}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.welcomeTitle}>
             Welcome back, {user?.name || "Vendor"} 👋
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Here's what's happening with your store today.</p>
+          <p className={styles.welcomeSubtitle}>Here's what's happening with your store today.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <select className="text-sm border border-input rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        <div className={styles.headerActions}>
+          <select className={styles.dateSelector}>
             <option>Last 30 days</option>
             <option>Last 7 days</option>
             <option>Last 90 days</option>
@@ -98,37 +178,37 @@ export default function VendorDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(s => <div key={s.title} className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <s.icon className="h-5 w-5 text-primary" />
+      <div className={styles.statsGrid}>
+        {stats.map(s => <div key={s.title} className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <div className={styles.statIcon}>
+                <s.icon />
               </div>
-              <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${s.up ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                {s.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+              <span className={`${styles.statTrend} ${s.up ? styles.trendUp : styles.trendDown}`}>
+                {s.up ? <ArrowUpRight className={styles.trendIcon} /> : <ArrowDownRight className={styles.trendIcon} />}
                 {s.trend}
               </span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{s.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{s.title} · <span className="text-muted-foreground/70">{s.sub}</span></p>
+            <p className={styles.statValue}>{s.value}</p>
+            <p className={styles.statLabel}>{s.title} · <span className={styles.statSub}>{s.sub}</span></p>
           </div>)}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className={styles.chartsRow}>
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className={styles.revenueChart}>
+          <div className={styles.chartHeader}>
             <div>
-              <h2 className="font-display text-base font-semibold text-foreground">Revenue Overview</h2>
-              <p className="text-xs text-muted-foreground">Monthly sales performance</p>
+              <h2 className={styles.chartTitle}>Revenue Overview</h2>
+              <p className={styles.chartSubtitle}>Monthly sales performance</p>
             </div>
-            <div className="flex gap-1">
-              {["Bar", "Area"].map(t => <button key={t} className="text-xs px-3 py-1 rounded-md border border-input hover:bg-muted transition-colors text-muted-foreground">{t}</button>)}
+            <div className={styles.chartControls}>
+              {["Bar", "Area"].map(t => <button key={t} className={styles.chartControlButton}>{t}</button>)}
             </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={vendorStats.monthlySales}>
+            <AreaChart data={dashboardData.monthlySales}>
               <defs>
                 <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
@@ -149,57 +229,57 @@ export default function VendorDashboard() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-base font-semibold text-foreground">Top Products</h2>
-            <button className="text-xs text-primary hover:underline">View All</button>
+        <div className={styles.topProducts}>
+          <div className={styles.topProductsHeader}>
+            <h2 className={styles.topProductsTitle}>Top Products</h2>
+            <button className={styles.viewAllButton}>View All</button>
           </div>
-          <div className="space-y-3">
-            {topProducts.map((p, i) => <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="text-xs font-bold text-muted-foreground w-5">#{i + 1}</span>
-                <img src={p.image} alt={p.name} className="h-10 w-10 rounded-lg object-cover" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.stock} in stock</p>
+          <div className={styles.productList}>
+            {dashboardData.topProducts.map((p, i) => <div key={p._id} className={styles.productItem}>
+                <span className={styles.productRank}>#{i + 1}</span>
+                <img src={p.images?.[0] || '/placeholder.svg'} alt={p.name} className={styles.productImage} />
+                <div className={styles.productInfo}>
+                  <p className={styles.productName}>{p.name}</p>
+                  <p className={styles.productStock}>{p.stock} in stock</p>
                 </div>
-                <p className="text-sm font-semibold text-foreground">₹{(p.price / 1000).toFixed(0)}K</p>
+                <p className={styles.productPrice}>Rs{(p.price / 1000).toFixed(0)}K</p>
               </div>)}
           </div>
         </div>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-card rounded-xl border border-border">
-        <div className="flex items-center justify-between p-6 pb-0">
+      <div className={styles.recentOrders}>
+        <div className={styles.ordersHeader}>
           <div>
-            <h2 className="font-display text-base font-semibold text-foreground">Recent Orders</h2>
-            <p className="text-xs text-muted-foreground">Latest customer orders for your store</p>
+            <h2 className={styles.ordersTitle}>Recent Orders</h2>
+            <p className={styles.ordersSubtitle}>Latest customer orders for your store</p>
           </div>
-          <button className="text-xs text-primary hover:underline flex items-center gap-1">
+          <button className={styles.viewAllButton}>
             View All Orders <ArrowUpRight className="h-3 w-3" />
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className={styles.ordersTableContainer}>
+          <table className={styles.ordersTable}>
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Order ID</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Product</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Date</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              <tr className={styles.ordersTableHead}>
+                <th className={styles.ordersTableCell}>Order ID</th>
+                <th className={styles.ordersTableCell}>Customer</th>
+                <th className={`${styles.ordersTableCell} ${styles.hiddenMd}`}>Product</th>
+                <th className={styles.ordersTableCell}>Amount</th>
+                <th className={`${styles.ordersTableCell} ${styles.hiddenSm}`}>Date</th>
+                <th className={styles.ordersTableCell}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map(order => <tr key={order.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                  <td className="p-4 text-sm font-mono font-medium text-primary">{order.id}</td>
-                  <td className="p-4 text-sm text-foreground">{order.customer}</td>
-                  <td className="p-4 text-sm text-muted-foreground hidden md:table-cell">{order.product}</td>
-                  <td className="p-4 text-sm font-semibold text-foreground">₹{order.amount.toLocaleString()}</td>
-                  <td className="p-4 text-sm text-muted-foreground hidden sm:table-cell">{order.date}</td>
-                  <td className="p-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[order.status]}`}>{order.status}</span>
+              {recentOrders.map(order => <tr key={order.id} className="ordersTableBody tr">
+                  <td className={`${styles.ordersTableCell} ${styles.orderId}`}>{order.id}</td>
+                  <td className={`${styles.ordersTableCell} text-foreground`}>{order.customer}</td>
+                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenMd}`}>{order.product}</td>
+                  <td className={`${styles.ordersTableCell} text-foreground font-semibold`}>Rs{order.amount.toLocaleString()}</td>
+                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenSm}`}>{order.date}</td>
+                  <td className={styles.ordersTableCell}>
+                    <span className={`${styles.statusBadge} ${getStatusClass(order.status)}`}>{order.status}</span>
                   </td>
                 </tr>)}
             </tbody>
@@ -208,42 +288,42 @@ export default function VendorDashboard() {
       </div>
 
       {/* Quick Actions + Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h2 className="font-display text-base font-semibold text-foreground mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
+      <div className={styles.actionsActivityRow}>
+        <div className={styles.quickActions}>
+          <h2 className={styles.sectionTitle}>Quick Actions</h2>
+          <div className={styles.actionButtonsGrid}>
             {[{
             label: "Add Product",
             icon: Package,
             path: "/vendor/add-product",
-            color: "bg-primary/10 text-primary"
+            color: styles.actionPrimary
           }, {
             label: "View Orders",
             icon: ShoppingBag,
             path: "/vendor/orders",
-            color: "bg-blue-100 text-blue-700"
+            color: styles.actionBlue
           }, {
             label: "Check Stock",
             icon: Warehouse,
             path: "/vendor/inventory",
-            color: "bg-amber-100 text-amber-700"
+            color: styles.actionAmber
           }, {
             label: "Analytics",
             icon: TrendingUp,
             path: "/vendor/analytics",
-            color: "bg-green-100 text-green-700"
-          }].map(action => <a key={action.label} href={action.path} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:shadow-sm hover:border-primary/30 transition-all">
-                <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${action.color}`}>
-                  <action.icon className="h-4 w-4" />
+            color: styles.actionGreen
+          }].map(action => <a key={action.label} href={action.path} className={styles.actionButton}>
+                <div className={`${styles.actionIcon} ${action.color}`}>
+                  <action.icon />
                 </div>
-                <span className="text-sm font-medium text-foreground">{action.label}</span>
+                <span className={styles.actionLabel}>{action.label}</span>
               </a>)}
           </div>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h2 className="font-display text-base font-semibold text-foreground mb-4">Recent Activity</h2>
-          <div className="space-y-4">
+        <div className={styles.recentActivity}>
+          <h2 className={styles.sectionTitle}>Recent Activity</h2>
+          <div className={styles.activityList}>
             {[{
             text: "New order #ORD-2847 received",
             time: "2 hours ago",
@@ -253,20 +333,20 @@ export default function VendorDashboard() {
             time: "5 hours ago",
             icon: Package
           }, {
-            text: "Payment of ₹85,000 settled",
+            text: "Payment of Rs85,000 settled",
             time: "1 day ago",
             icon: IndianRupee
           }, {
-            text: "Customer reviewed 'Diamond Studs' ★★★★★",
+            text: "Customer reviewed 'Diamond Studs' ",
             time: "2 days ago",
             icon: Eye
-          }].map((activity, i) => <div key={i} className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <activity.icon className="h-3.5 w-3.5 text-muted-foreground" />
+          }].map((activity, i) => <div key={i} className={styles.activityItem}>
+                <div className={styles.activityIcon}>
+                  <activity.icon />
                 </div>
-                <div>
-                  <p className="text-sm text-foreground">{activity.text}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <div className={styles.activityContent}>
+                  <p className={styles.activityText}>{activity.text}</p>
+                  <p className={styles.activityTime}>
                     <Clock className="h-3 w-3" /> {activity.time}
                   </p>
                 </div>

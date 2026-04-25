@@ -1,153 +1,286 @@
-import { useState } from "react";
-import { Search, Filter, MoreHorizontal, CheckCircle, Clock, XCircle, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Filter, MoreHorizontal, CheckCircle, Clock, XCircle, ExternalLink, Eye, Ban, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-const vendors = [{
-  id: 1,
-  name: "Tanishq",
-  owner: "Titan Company",
-  products: 120,
-  revenue: "₹18.5L",
-  orders: 156,
-  status: "Verified",
-  rating: 4.8,
-  fulfillment: 96
-}, {
-  id: 2,
-  name: "Kalyan Jewellers",
-  owner: "T.S. Kalyanaraman",
-  products: 85,
-  revenue: "₹14.2L",
-  orders: 128,
-  status: "Verified",
-  rating: 4.6,
-  fulfillment: 92
-}, {
-  id: 3,
-  name: "Malabar Gold",
-  owner: "M.P. Ahammed",
-  products: 200,
-  revenue: "₹12.8L",
-  orders: 112,
-  status: "Pending",
-  rating: 4.7,
-  fulfillment: 88
-}, {
-  id: 4,
-  name: "Joyalukkas",
-  owner: "Joy Alukkas",
-  products: 95,
-  revenue: "₹10.4L",
-  orders: 94,
-  status: "Verified",
-  rating: 4.5,
-  fulfillment: 94
-}, {
-  id: 5,
-  name: "PC Jeweller",
-  owner: "Balram Garg",
-  products: 60,
-  revenue: "₹5.2L",
-  orders: 48,
-  status: "Suspended",
-  rating: 3.8,
-  fulfillment: 72
-}];
-const statusConfig = {
-  Verified: {
-    style: "bg-emerald-500/10 text-emerald-600",
-    icon: CheckCircle
-  },
-  Pending: {
-    style: "bg-amber-500/10 text-amber-600",
-    icon: Clock
-  },
-  Suspended: {
-    style: "bg-destructive/10 text-destructive",
-    icon: XCircle
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import axios from "axios";
+import styles from "./ManageVendorsPage.module.css";
+
+const getStatusConfig = (status) => {
+  switch(status) {
+    case "Verified":
+      return {
+        style: styles.statusVerified,
+        icon: CheckCircle
+      };
+    case "Pending":
+      return {
+        style: styles.statusPending,
+        icon: Clock
+      };
+    case "Suspended":
+      return {
+        style: styles.statusSuspended,
+        icon: XCircle
+      };
+    default:
+      return {
+        style: styles.statusPending,
+        icon: Clock
+      };
   }
 };
+
 export default function ManageVendorsPage() {
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const filtered = vendors.filter(v => v.name.toLowerCase().includes(search.toLowerCase()));
-  return <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/vendors", {
+        withCredentials: true
+      });
+      setVendors(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch vendors",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveVendor = async (vendorId) => {
+    try {
+      await axios.put(`http://localhost:5000/api/vendors/${vendorId}/approve`, {
+        approved: true
+      }, {
+        withCredentials: true
+      });
+      
+      toast({
+        title: "Success",
+        description: "Vendor approved successfully"
+      });
+      
+      fetchVendors();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve vendor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectVendor = async (vendorId) => {
+    try {
+      await axios.put(`http://localhost:5000/api/vendors/${vendorId}/approve`, {
+        approved: false,
+        rejectionReason: "Application rejected by admin"
+      }, {
+        withCredentials: true
+      });
+      
+      toast({
+        title: "Success",
+        description: "Vendor rejected successfully"
+      });
+      
+      fetchVendors();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject vendor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleToggleVendorStatus = async (vendorId, isActive) => {
+    try {
+      await axios.put(`http://localhost:5000/api/vendors/${vendorId}/toggle-status`, {
+        isActive,
+        suspensionReason: isActive ? null : "Suspended by admin"
+      }, {
+        withCredentials: true
+      });
+      
+      toast({
+        title: "Success",
+        description: isActive ? "Vendor activated successfully" : "Vendor suspended successfully"
+      });
+      
+      fetchVendors();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update vendor status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getStatusConfig = (vendor) => {
+    if (!vendor.user?.isApproved) {
+      return {
+        style: styles.statusPending,
+        icon: Clock,
+        status: "Pending"
+      };
+    }
+    
+    if (!vendor.isActive) {
+      return {
+        style: styles.statusSuspended,
+        icon: XCircle,
+        status: "Suspended"
+      };
+    }
+    
+    if (vendor.isVerified) {
+      return {
+        style: styles.statusVerified,
+        icon: CheckCircle,
+        status: "Verified"
+      };
+    }
+    
+    return {
+      style: styles.statusPending,
+      icon: Clock,
+      status: "Pending"
+    };
+  };
+
+  const filtered = vendors.filter(v => 
+    v.shopName?.toLowerCase().includes(search.toLowerCase()) ||
+    v.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+    v.user?.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const stats = {
+    total: vendors.length,
+    verified: vendors.filter(v => v.isVerified && v.isActive).length,
+    pending: vendors.filter(v => !v.user?.isApproved).length,
+    suspended: vendors.filter(v => !v.isActive).length
+  };
+
+  if (loading) {
+    return <div className={styles.container}>
+      <div className="text-center py-8">Loading vendors...</div>
+    </div>;
+  }
+
+  return <div className={styles.container}>
+      <div className={styles.summaryGrid}>
         {[{
         label: "Total Vendors",
-        value: "45"
+        value: stats.total.toString()
       }, {
         label: "Verified",
-        value: "38"
+        value: stats.verified.toString()
       }, {
         label: "Pending Review",
-        value: "5"
+        value: stats.pending.toString()
       }, {
         label: "Suspended",
-        value: "2"
-      }].map(s => <Card key={s.label} className="border-border/50 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold text-foreground mt-1">{s.value}</p>
+        value: stats.suspended.toString()
+      }].map(s => <Card key={s.label} className={styles.summaryCard}>
+            <CardContent className={styles.summaryCardContent}>
+              <p className={styles.summaryLabel}>{s.label}</p>
+              <p className={styles.summaryValue}>{s.value}</p>
             </CardContent>
           </Card>)}
       </div>
 
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <CardTitle className="text-base font-semibold text-foreground">All Vendors</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 w-56 text-sm" />
+      <Card className={styles.tableCard}>
+        <CardHeader className={styles.tableHeader}>
+          <div className={styles.tableHeaderContentRow}>
+            <CardTitle className={styles.tableTitle}>All Vendors</CardTitle>
+            <div className={styles.tableActions}>
+              <div className={styles.searchContainer}>
+                <Search className={styles.searchIcon} />
+                <Input placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
               </div>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5"><Filter className="h-3.5 w-3.5" /> Filter</Button>
+              <Button variant="outline" size="sm" className={styles.filterButton}><Filter className="h-3.5 w-3.5" /> Filter</Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className={styles.tableContent}>
+          <div className={styles.tableContainer}>
+            <table className={styles.vendorsTable}>
               <thead>
-                <tr className="border-y border-border bg-muted/30">
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Products</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Revenue</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Fulfillment</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3"></th>
+                <tr className={styles.tableHead}>
+                  <th className={styles.tableCell}>Vendor</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Products</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenSm}`}>Revenue</th>
+                  <th className={`${styles.tableCell} ${styles.hiddenLg}`}>Fulfillment</th>
+                  <th className={styles.tableCell}>Status</th>
+                  <th className={styles.tableCell}></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(v => {
-                const sc = statusConfig[v.status];
+                const sc = getStatusConfig(v);
                 const StatusIcon = sc.icon;
-                return <tr key={v.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{v.name}</p>
-                          <p className="text-xs text-muted-foreground">{v.owner}</p>
+                return <tr key={v._id} className="tableBody tr">
+                      <td className={styles.tableCell}>
+                        <div className={styles.vendorInfo}>
+                          <p className={styles.vendorName}>{v.shopName}</p>
+                          <p className={styles.vendorOwner}>{v.user?.firstName} {v.user?.lastName}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-foreground font-medium hidden md:table-cell">{v.products}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-foreground hidden sm:table-cell">{v.revenue}</td>
-                      <td className="px-6 py-4 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <Progress value={v.fulfillment} className="h-1.5 w-20" />
-                          <span className="text-xs text-muted-foreground">{v.fulfillment}%</span>
+                      <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenMd}`}>{v.totalProducts || 0}</td>
+                      <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenSm}`}>${(v.totalSales || 0).toLocaleString()}</td>
+                      <td className={`${styles.tableCell} ${styles.hiddenLg}`}>
+                        <div className={styles.fulfillmentContainer}>
+                          <Progress value={85} className={styles.fulfillmentProgress} />
+                          <span className={styles.fulfillmentText}>85%</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${sc.style}`}>
-                          <StatusIcon className="h-3 w-3" /> {v.status}
+                      <td className={styles.tableCell}>
+                        <span className={`${styles.statusBadge} ${sc.style}`}>
+                          <StatusIcon className={styles.statusIcon} /> {sc.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><ExternalLink className="h-4 w-4" /></button>
-                          <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><MoreHorizontal className="h-4 w-4" /></button>
+                      <td className={styles.tableCell}>
+                        <div className={styles.actionCell}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className={styles.actionButton}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleApproveVendor(v._id)} disabled={v.user?.isApproved}>
+                                <Check className="h-4 w-4 mr-2" /> Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRejectVendor(v._id)} disabled={v.user?.isApproved}>
+                                <XCircle className="h-4 w-4 mr-2" /> Reject
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleVendorStatus(v._id, !v.isActive)}>
+                                {v.isActive ? <Ban className="h-4 w-4 mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                                {v.isActive ? "Suspend" : "Activate"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" /> View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>;

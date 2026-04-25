@@ -54,9 +54,26 @@ export default function VendorRegisterPage() {
       return;
     }
     setLoading(true);
+    
+    // Prepare vendor registration data
+    const vendorData = {
+      ...form,
+      role: "vendor",
+      firstName: form.ownerName,
+      lastName: "", // Vendor registration only has owner name
+      username: form.shopName.toLowerCase().replace(/\s+/g, '_'), // Generate username from shop name
+      address: {
+        fullAddress: form.shopAddress,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+        country: "India"
+      }
+    };
+    
     const {
       error
-    } = await signup(form.email, form.password, form.ownerName, "vendor");
+    } = await signup(vendorData);
     setLoading(false);
     if (error) {
       toast({

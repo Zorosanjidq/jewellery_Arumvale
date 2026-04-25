@@ -1,48 +1,151 @@
 import { useParams, Link } from "react-router-dom";
-import { products } from "@/data/mockData";
+import { useState, useEffect } from "react";
 import { useCompare } from "@/context/CompareContext";
-import { Star, ShoppingCart, GitCompareArrows, ArrowLeft } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import { Star, ShoppingCart, GitCompareArrows, ArrowLeft, Loader2 } from "lucide-react";
+import axios from "axios";
+import styles from "./ProductDetailPage.module.css";
 export default function ProductDetailPage() {
-  const {
-    id
-  } = useParams();
-  const product = products.find(p => p.id === id);
+  const { id } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const {
     addToCompare,
     removeFromCompare,
     isInCompare
   } = useCompare();
-  if (!product) return <div className="container py-20 text-center text-muted-foreground">Product not found.</div>;
-  const inCompare = isInCompare(product.id);
-  return <div className="container py-8">
-      <Link to="/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:5000/api/products/${id}`, {
+          withCredentials: true
+        });
+        setProduct(response.data);
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        setError("Product not found.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <Loader2 className="animate-spin" />
+          <p>Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return <div className={styles.notFound}>{error || "Product not found."}</div>;
+  }
+  const inCompare = isInCompare(product._id);
+  const imageUrl = product.images?.[0] ? `${import.meta.env.VITE_API_URL}${product.images[0]}` : '/placeholder.svg';
+
+  const handleAddToCart = () => {
+    try {
+      addToCart(product, quantity);
+      toast({
+        title: "Added to Cart",
+        description: `${product.name} has been added to your cart.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleQuantityChange = (newQuantity) => {
+    if (newQuantity >= 1 && newQuantity <= product.stock) {
+      setQuantity(newQuantity);
+    }
+  };
+  return <div className={styles.container}>
+      <Link to="/products" className={styles.backLink}>
         <ArrowLeft className="h-4 w-4" /> Back to Products
       </Link>
 
-      <div className="grid md:grid-cols-2 gap-10">
-        <div className="rounded-xl overflow-hidden bg-muted">
-          <img src={product.image} alt={product.name} className="w-full aspect-square object-cover" />
+      <div className={styles.productGrid}>
+        <div className={styles.productImageContainer}>
+          <img src={imageUrl} alt={product.name} className={styles.productImage} />
         </div>
-        <div className="flex flex-col justify-center">
-          <p className="text-sm text-muted-foreground mb-1">{product.vendor} · {product.category}</p>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">{product.name}</h1>
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="h-4 w-4 fill-primary text-primary" />
-            <span className="font-medium text-foreground">{product.rating}/5</span>
-            <span className="text-muted-foreground text-sm">· Value Score {product.valueScore}/100</span>
+        <div className={styles.productDetails}>
+          <p className={styles.productMeta}>{product.vendor?.username || 'Unknown Vendor'} · {product.category}</p>
+          <h1 className={styles.productTitle}>{product.name}</h1>
+          <div className={styles.ratingSection}>
+            <Star className={styles.ratingStar} />
+            <span className={styles.ratingValue}>{product.averageRating || 0}/5</span>
+            <span className={styles.valueScore}>· {product.reviewCount || 0} reviews</span>
           </div>
-          <p className="text-3xl font-bold text-primary mb-4">₹{product.price.toLocaleString()}</p>
-          <div className="flex gap-4 text-sm text-muted-foreground mb-6">
-            <span>Weight: {product.weight}g</span>
-            <span>Purity: {product.purity}</span>
-            <span>Stock: {product.stock} left</span>
+          <p className={styles.price}>Rs{product.price.toLocaleString()}</p>
+          <div className={styles.productSpecs}>
+            <span className={styles.specItem}>Weight: {product.weight}g</span>
+            <span className={styles.specItem}>Purity: {product.purity}</span>
+            <span className={styles.specItem}>Stock: {product.stock} left</span>
           </div>
-          <p className="text-foreground/80 mb-8">{product.description}</p>
-          <div className="flex gap-3">
-            <button className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-gold-dark transition-colors">
-              <ShoppingCart className="h-4 w-4" /> Add to Cart
+          <p className={styles.description}>{product.description}</p>
+          
+          {/* Quantity Selector */}
+          <div className={styles.quantitySection}>
+            <label className={styles.quantityLabel}>Quantity:</label>
+            <div className={styles.quantityControls}>
+              <button 
+                onClick={() => handleQuantityChange(quantity - 1)}
+                disabled={quantity <= 1}
+                className={styles.quantityButton}
+              >
+                -
+              </button>
+              <input 
+                type="number" 
+                value={quantity}
+                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                min="1"
+                max={product.stock}
+                className={styles.quantityInput}
+              />
+              <button 
+                onClick={() => handleQuantityChange(quantity + 1)}
+                disabled={quantity >= product.stock}
+                className={styles.quantityButton}
+              >
+                +
+              </button>
+            </div>
+            <span className={styles.stockInfo}>
+              {product.stock} available
+            </span>
+          </div>
+          
+          <div className={styles.actionButtons}>
+            <button 
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={styles.addToCartButton}
+            >
+              <ShoppingCart className="h-4 w-4" /> 
+              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
             </button>
-            <button onClick={() => inCompare ? removeFromCompare(product.id) : addToCompare(product)} className={`flex items-center gap-2 px-6 py-3 rounded-full border font-medium transition-colors ${inCompare ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-primary hover:text-primary"}`}>
+            <button onClick={() => inCompare ? removeFromCompare(product._id) : addToCompare(product)} className={`${styles.compareButton} ${inCompare ? styles.active : ''}`}>
               <GitCompareArrows className="h-4 w-4" />
               {inCompare ? "In Compare" : "Compare"}
             </button>

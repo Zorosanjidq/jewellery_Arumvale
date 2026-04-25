@@ -1,41 +1,104 @@
-import { products } from "@/data/mockData";
-import { Edit, Trash2, Search, Plus, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Edit, Trash2, Search, Plus, Eye, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-const statusMap = {
-  active: {
-    label: "Active",
-    class: "bg-green-100 text-green-700"
-  },
-  draft: {
-    label: "Draft",
-    class: "bg-muted text-muted-foreground"
+import axios from "axios";
+import styles from "./ManageProductsPage.module.css";
+const getStatusClass = (status) => {
+  switch(status) {
+    case "Active":
+      return styles.statusActive;
+    case "Draft":
+      return styles.statusDraft;
+    default:
+      return styles.statusActive;
   }
 };
+
 export default function ManageProductsPage() {
-  return <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Products</h1>
-          <p className="text-sm text-muted-foreground mt-1">{products.length} products in your catalog</p>
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter !== "All Status") params.append('status', statusFilter.toLowerCase());
+      if (categoryFilter !== "All Categories") params.append('category', categoryFilter);
+
+      const response = await axios.get(
+        `http://localhost:5000/api/products/my?${params}`,
+        { withCredentials: true }
+      );
+      setProducts(response.data.products || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [search, statusFilter, categoryFilter]);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <Loader2 className="animate-spin" />
+          <p>Loading products...</p>
         </div>
-        <Link to="/vendor/add-product" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+      </div>
+    );
+  }
+
+  return <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.pageTitle}>Products</h1>
+          <p className={styles.pageSubtitle}>{products.length} products in your catalog</p>
+        </div>
+        <Link to="/vendor/add-product" className={styles.addButton}>
           <Plus className="h-4 w-4" /> Add Product
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" placeholder="Search products..." className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+      <div className={styles.filters}>
+        <div className={styles.searchContainer}>
+          <Search className={styles.searchIcon} />
+          <input 
+            type="text" 
+            placeholder="Search products..." 
+            className={styles.searchInput}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <select className="px-3 py-2.5 rounded-lg border border-input bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        <select 
+          className={styles.filterSelect}
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
           <option>All Categories</option>
-          <option>Gold</option>
-          <option>Silver</option>
-          <option>Diamond</option>
+          <option>Necklace</option>
+          <option>Ring</option>
+          <option>Bangle</option>
+          <option>Earrings</option>
+          <option>Pendant</option>
+          <option>Anklet</option>
+          <option>Chain</option>
+          <option>Bracelet</option>
         </select>
-        <select className="px-3 py-2.5 rounded-lg border border-input bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        <select 
+          className={styles.filterSelect}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option>All Status</option>
           <option>Active</option>
           <option>Draft</option>
@@ -43,67 +106,70 @@ export default function ManageProductsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      <div className={styles.tableContainer}>
+        <div className={styles.tableWrapper}>
+          <table className={styles.productsTable}>
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Product</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Purity</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Stock</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Status</th>
-                <th className="text-right p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+              <tr className={styles.tableHead}>
+                <th className={styles.tableCell}>Product</th>
+                <th className={styles.tableCell}>Price</th>
+                <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Purity</th>
+                <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Stock</th>
+                <th className={`${styles.tableCell} ${styles.hiddenLg}`}>Status</th>
+                <th className={styles.tableCell}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {products.map((p, i) => <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img src={p.image} alt={p.name} className="h-11 w-11 rounded-lg object-cover" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.category} · {p.weight}g</p>
+              {products.map((p) => {
+                const imageUrl = p.images?.[0] ? `${import.meta.env.VITE_API_URL}${p.images[0]}` : '/placeholder.svg';
+                return <tr key={p._id} className="tableBody tr">
+                  <td className={styles.tableCell}>
+                    <div className={styles.productCell}>
+                      <img src={imageUrl} alt={p.name} className={styles.productImage} />
+                      <div className={styles.productInfo}>
+                        <p className={styles.productName}>{p.name}</p>
+                        <p className={styles.productMeta}>{p.category} · {p.weight}g</p>
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 text-sm font-semibold text-foreground">₹{p.price.toLocaleString()}</td>
-                  <td className="p-4 text-sm text-muted-foreground hidden md:table-cell">{p.purity}</td>
-                  <td className="p-4 hidden md:table-cell">
-                    <span className={`text-sm font-semibold ${p.stock < 5 ? "text-destructive" : "text-foreground"}`}>
+                  <td className={`${styles.tableCell} ${styles.price}`}>Rs{p.price.toLocaleString()}</td>
+                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{p.purity}</td>
+                  <td className={`${styles.tableCell} ${styles.hiddenMd}`}>
+                    <span className={p.stock < 5 ? styles.stockLow : styles.stockNormal}>
                       {p.stock}
-                      {p.stock < 5 && <span className="text-xs font-normal text-destructive ml-1">Low</span>}
+                      {p.stock < 5 && <span className={styles.stockLowIndicator}>Low</span>}
                     </span>
                   </td>
-                  <td className="p-4 hidden lg:table-cell">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${i % 3 === 2 ? statusMap.draft.class : statusMap.active.class}`}>
-                      {i % 3 === 2 ? "Draft" : "Active"}
+                  <td className={`${styles.tableCell} ${styles.hiddenLg}`}>
+                    <span className={`${styles.statusBadge} ${getStatusClass(p.status)}`}>
+                      {p.status}
                     </span>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="View">
+                  <td className={styles.tableCell}>
+                    <div className={styles.actionButtons}>
+                      <Link to={`/product/${p._id}`} className={styles.actionButton} title="View">
                         <Eye className="h-4 w-4" />
-                      </button>
-                      <button className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit">
+                      </Link>
+                      <Link to={`/vendor/edit-product/${p._id}`} className={styles.actionButton} title="Edit">
                         <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Delete">
+                      </Link>
+                      <button className={`${styles.actionButton} ${styles.actionButtonDelete}`} title="Delete">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
-                </tr>)}
+                </tr>;
+              })}
             </tbody>
           </table>
         </div>
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <p className="text-xs text-muted-foreground">Showing 1-{products.length} of {products.length} products</p>
-          <div className="flex gap-1">
-            <button className="h-8 px-3 rounded-md border border-input text-xs text-muted-foreground hover:bg-muted transition-colors">Previous</button>
-            <button className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium">1</button>
-            <button className="h-8 px-3 rounded-md border border-input text-xs text-muted-foreground hover:bg-muted transition-colors">Next</button>
+        <div className={styles.pagination}>
+          <p className={styles.paginationInfo}>Showing 1-{products.length} of {products.length} products</p>
+          <div className={styles.paginationControls}>
+            <button className={styles.paginationButton}>Previous</button>
+            <button className={`${styles.paginationButton} ${styles.paginationButtonActive}`}>1</button>
+            <button className={styles.paginationButton}>Next</button>
           </div>
         </div>
       </div>
