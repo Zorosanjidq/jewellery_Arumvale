@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, GitCompareArrows, Shield, Award, Gem, Sparkles, Star, ChevronRight, LogIn } from "lucide-react";
-import { products, categories } from "@/data/mockData";
+import { ArrowRight, GitCompareArrows, Shield, Award, Gem, Sparkles, Star, ChevronRight, LogIn, Loader2 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import heroBanner from "@/assets/hero-banner.jpg";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import MetalPrices from "../components/MetalPrices";
+import axios from "axios";
 
 const trustPoints = [{
   icon: Shield,
@@ -40,13 +40,39 @@ const testimonials = [{
   text: "I compared 4 diamond sets side-by-side and found the perfect one within my budget.",
   rating: 4
 }];
+const categories = ["All", "Necklace", "Ring", "Bangle", "Earrings", "Pendant", "Anklet", "Chain", "Bracelet"];
 export default function Index() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const {
     isLoggedIn,
     user
   } = useAuth();
-  const filtered = activeCategory === "All" ? products : products.filter(p => p.category === activeCategory || p.purity === activeCategory);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:5000/api/products?status=active");
+        setProducts(response.data.products || []);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const filtered = activeCategory === "All" ? products : products.filter(p => p.category === activeCategory);
+
+  if (loading) {
+    return <div className="container py-20 text-center">
+        <Loader2 className="animate-spin h-8 w-8 mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Loading products...</p>
+      </div>;
+  }
   return <div>
       {/* Hero */}
       <section className="relative h-[80vh] min-h-[560px] overflow-hidden">

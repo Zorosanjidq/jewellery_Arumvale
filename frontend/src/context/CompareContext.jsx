@@ -5,14 +5,14 @@ export const CompareProvider = ({
 }) => {
   const [compareItems, setCompareItems] = useState([]);
   const addToCompare = product => {
-    if (compareItems.length < 4 && !compareItems.find(p => p.id === product.id)) {
+    if (compareItems.length < 4 && !compareItems.find(p => p._id === product._id)) {
       setCompareItems(prev => [...prev, product]);
     }
   };
   const removeFromCompare = id => {
-    setCompareItems(prev => prev.filter(p => p.id !== id));
+    setCompareItems(prev => prev.filter(p => p._id !== id));
   };
-  const isInCompare = id => compareItems.some(p => p.id === id);
+  const isInCompare = id => compareItems.some(p => p._id === id);
   const clearCompare = () => setCompareItems([]);
   return <CompareContext.Provider value={{
     compareItems,

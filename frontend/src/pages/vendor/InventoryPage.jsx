@@ -1,9 +1,45 @@
-import { products } from "@/data/mockData";
-import { AlertTriangle, Package, Search, ArrowUpDown } from "lucide-react";
+import { AlertTriangle, Package, Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 import styles from "./InventoryPage.module.css";
+
 export default function InventoryPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:5000/api/products/my", {
+          withCredentials: true
+        });
+        setProducts(response.data.products || []);
+      } catch (error) {
+        console.error("Error fetching vendor products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   const lowStock = products.filter(p => p.stock < 5).length;
   const totalUnits = products.reduce((sum, p) => sum + p.stock, 0);
+
+  if (loading) {
+    return <div className={styles.container}>
+        <div className={styles.header}>
+          <h1 className={styles.pageTitle}>Inventory</h1>
+          <p className={styles.pageSubtitle}>Monitor stock levels and manage inventory across your catalog.</p>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="animate-spin h-8 w-8 text-primary" />
+        </div>
+      </div>;
+  }
   return <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Inventory</h1>

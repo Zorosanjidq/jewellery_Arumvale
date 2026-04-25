@@ -1,28 +1,70 @@
-import { useState } from "react";
-import { products } from "@/data/mockData";
-import { Search, Filter, Eye, Ban, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Filter, Eye, Ban, Star, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import axios from "axios";
 import styles from "./AdminProductsPage.module.css";
+
 export default function AdminProductsPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    activeListings: 0,
+    flagged: 0,
+    avgRating: 0
+  });
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:5000/api/products", {
+          withCredentials: true
+        });
+        const productList = response.data.products || [];
+        setProducts(productList);
+        setStats({
+          totalProducts: productList.length,
+          activeListings: productList.filter(p => p.status === "active").length,
+          flagged: 0,
+          avgRating: 0
+        });
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  if (loading) {
+    return <div className={styles.container}>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="animate-spin h-8 w-8 text-primary" />
+        </div>
+      </div>;
+  }
   return <div className={styles.container}>
       <div className={styles.summaryGrid}>
         {[{
         label: "Total Products",
-        value: "890"
+        value: stats.totalProducts.toString()
       }, {
         label: "Active Listings",
-        value: "842"
+        value: stats.activeListings.toString()
       }, {
         label: "Flagged",
-        value: "12"
+        value: stats.flagged.toString()
       }, {
         label: "Avg. Rating",
-        value: "4.6 "
+        value: stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "N/A"
       }].map(s => <Card key={s.label} className={styles.summaryCard}>
             <CardContent className={styles.summaryCardContent}>
               <p className={styles.summaryLabel}>{s.label}</p>
