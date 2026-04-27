@@ -43,7 +43,7 @@
 }
 
 .pageTitle {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: #111827;
@@ -299,13 +299,190 @@
   color: #dc2626;
 }
 
+/* Status controls */
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statusPending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statusConfirmed {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.statusProcessing {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.statusShipped {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
+.statusDelivered {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.statusCancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.statusRefunded {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* Status controls container */
+.statusControls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+/* Status select dropdown */
+.statusSelect {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.statusSelect:hover {
+  border-color: #9ca3af;
+}
+
+.statusSelect:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.statusSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Apply status colors to select */
+.statusSelect.statusPending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #f59e0b;
+}
+
+.statusSelect.statusConfirmed {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #3b82f6;
+}
+
+.statusSelect.statusProcessing {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-color: #6366f1;
+}
+
+.statusSelect.statusShipped {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  border-color: #8b5cf6;
+}
+
+.statusSelect.statusDelivered {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-color: #10b981;
+}
+
+.statusSelect.statusCancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-color: #ef4444;
+}
+
+.statusSelect.statusRefunded {
+  background-color: #f3f4f6;
+  color: #374151;
+  border-color: #6b7280;
+}
+
+/* Tracking number input */
+.trackingInput {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.trackingInput:hover {
+  border-color: #9ca3af;
+}
+
+.trackingInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.trackingInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Update button */
+.updateButton {
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #3b82f6;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.updateButton:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.updateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.updateButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 /* Responsive design */
 @media (min-width: 640px) {
   .header {
     flex-direction: row;
     align-items: center;
   }
-  
+
   .filters {
     flex-direction: row;
   }
@@ -321,59 +498,59 @@
   .pageTitle {
     font-size: 1.25rem;
   }
-  
+
   .exportButton {
     font-size: 0.75rem;
     padding: 0.5rem 0.75rem;
   }
-  
+
   .exportButton svg {
     height: 0.875rem;
     width: 0.875rem;
   }
-  
+
   .searchInput,
   .statusFilter {
     font-size: 0.75rem;
     padding: 0.5rem 0.75rem;
   }
-  
+
   .searchInput {
     padding-left: 2rem;
   }
-  
+
   .searchIcon {
     left: 0.5rem;
     height: 0.875rem;
     width: 0.875rem;
   }
-  
+
   .summaryCard {
     padding: 0.75rem;
   }
-  
+
   .summaryCount {
     font-size: 1.125rem;
   }
-  
+
   .tableHead th,
   .tableCell {
     padding: 0.75rem;
     font-size: 0.75rem;
   }
-  
+
   .customerName {
     font-size: 0.75rem;
   }
-  
+
   .customerEmail {
     font-size: 0.625rem;
   }
-  
+
   .amount {
     font-size: 0.75rem;
   }
-  
+
   .statusBadge {
     font-size: 0.625rem;
     padding: 0.1875rem 0.5rem;

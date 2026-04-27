@@ -1,45 +1,11 @@
 import { useState, useEffect } from "react";
-import { IndianRupee, ShoppingBag, Package, TrendingUp, ArrowUpRight, ArrowDownRight, Eye, Clock, Warehouse, Loader2 } from "lucide-react";
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Link } from "react-router-dom";
+import { Package, TrendingUp, Users, ShoppingCart, Eye, DollarSign, ArrowUp, ArrowDown, Loader2, IndianRupee, ShoppingBag, ArrowUpRight, ArrowDownRight, Warehouse, Clock } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { useAuth } from "@/context/AuthContext";
+import { getImageUrl } from "@/utils/getImageUrl";
 import axios from "axios";
 import styles from "./VendorDashboard.module.css";
-const recentOrders = [{
-  id: "ORD-2847",
-  customer: "Priya Sharma",
-  product: "Royal Diamond Necklace",
-  amount: 245000,
-  status: "Delivered",
-  date: "Mar 14"
-}, {
-  id: "ORD-2846",
-  customer: "Rahul Mehta",
-  product: "Solitaire Gold Ring",
-  amount: 85000,
-  status: "Shipped",
-  date: "Mar 13"
-}, {
-  id: "ORD-2845",
-  customer: "Anita Desai",
-  product: "Classic Gold Bangle",
-  amount: 120000,
-  status: "Processing",
-  date: "Mar 12"
-}, {
-  id: "ORD-2844",
-  customer: "Vikram Singh",
-  product: "Diamond Stud Earrings",
-  amount: 175000,
-  status: "Pending",
-  date: "Mar 11"
-}, {
-  id: "ORD-2843",
-  customer: "Meera Patel",
-  product: "Gold Pendant Chain",
-  amount: 65000,
-  status: "Delivered",
-  date: "Mar 10"
-}];
 const getStatusClass = (status) => {
   switch(status) {
     case "Delivered":
@@ -56,18 +22,19 @@ const getStatusClass = (status) => {
 };
 export default function VendorDashboard() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     stats: {
+      totalProducts: 0,
       totalSales: 0,
       totalOrders: 0,
-      totalProducts: 0,
       conversionRate: 0
     },
     monthlySales: [],
     topProducts: [],
-    recentOrders: []
+    recentOrders: [],
+    recentActivity: []
   });
+  const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
     try {
@@ -100,12 +67,71 @@ export default function VendorDashboard() {
         { month: 'Jun', sales: stats.totalSales * 0.15 }
       ];
       
-      setDashboardData({
-        stats,
-        monthlySales,
-        topProducts: activeProducts.slice(0, 4),
-        recentOrders: [] // Mock orders for now
-      });
+      // Fetch recent orders
+      try {
+        const ordersResponse = await axios.get(
+          'http://localhost:5000/api/orders/vendor/my?limit=5',
+          { withCredentials: true }
+        );
+        const recentOrdersData = (ordersResponse.data.orders || []).slice(0, 5);
+        
+        // Generate recent activity from orders and products
+        const recentActivityData = [];
+        
+        // Add recent order activities
+        recentOrdersData.slice(0, 3).forEach((order, index) => {
+          const timeAgo = index === 0 ? '2 hours ago' : index === 1 ? '5 hours ago' : '1 day ago';
+          const customerName = order.customer?.firstName && order.customer?.lastName 
+            ? `${order.customer.firstName} ${order.customer.lastName}`
+            : 'Customer';
+          const productName = order.items?.[0]?.product?.name || 'Product';
+          
+          recentActivityData.push({
+            text: `New order #${order.orderNumber || order._id?.slice(-8).toUpperCase()} received`,
+            time: timeAgo,
+            icon: ShoppingBag
+          });
+        });
+        
+        // Add low stock alerts
+        const lowStockProducts = activeProducts.filter(p => p.stock < 5);
+        if (lowStockProducts.length > 0) {
+          recentActivityData.push({
+            text: `Product '${lowStockProducts[0].name}' stock low`,
+            time: '5 hours ago',
+            icon: Package
+          });
+        }
+        
+        // Add payment activity
+        const paidOrders = recentOrdersData.filter(o => o.paymentStatus === 'paid');
+        if (paidOrders.length > 0) {
+          const paidOrder = paidOrders[0];
+          recentActivityData.push({
+            text: `Payment of Rs${paidOrder.total?.toLocaleString() || '0'} settled`,
+            time: '1 day ago',
+            icon: IndianRupee
+          });
+        }
+        
+        setDashboardData({
+          stats,
+          monthlySales,
+          topProducts: activeProducts.slice(0, 4),
+          recentOrders: recentOrdersData,
+          recentActivity: recentActivityData.slice(0, 4)
+        });
+        
+      } catch (error) {
+        console.error('Error fetching recent orders:', error);
+        setDashboardData({
+          stats,
+          monthlySales,
+          topProducts: activeProducts.slice(0, 4),
+          recentOrders: [],
+          recentActivity: []
+        });
+      }
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -237,7 +263,7 @@ export default function VendorDashboard() {
           <div className={styles.productList}>
             {dashboardData.topProducts.map((p, i) => <div key={p._id} className={styles.productItem}>
                 <span className={styles.productRank}>#{i + 1}</span>
-                <img src={p.images?.[0] || '/placeholder.svg'} alt={p.name} className={styles.productImage} />
+                <img src={getImageUrl(p.images?.[0])} alt={p.name} className={styles.productImage} />
                 <div className={styles.productInfo}>
                   <p className={styles.productName}>{p.name}</p>
                   <p className={styles.productStock}>{p.stock} in stock</p>
@@ -255,9 +281,11 @@ export default function VendorDashboard() {
             <h2 className={styles.ordersTitle}>Recent Orders</h2>
             <p className={styles.ordersSubtitle}>Latest customer orders for your store</p>
           </div>
+         <Link to="/vendor/orders" >
           <button className={styles.viewAllButton}>
-            View All Orders <ArrowUpRight className="h-3 w-3" />
+            View All Orders  <ArrowUpRight className="h-3 w-3" />
           </button>
+          </Link>
         </div>
         <div className={styles.ordersTableContainer}>
           <table className={styles.ordersTable}>
@@ -272,16 +300,30 @@ export default function VendorDashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map(order => <tr key={order.id} className="ordersTableBody tr">
-                  <td className={`${styles.ordersTableCell} ${styles.orderId}`}>{order.id}</td>
-                  <td className={`${styles.ordersTableCell} text-foreground`}>{order.customer}</td>
-                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenMd}`}>{order.product}</td>
-                  <td className={`${styles.ordersTableCell} text-foreground font-semibold`}>Rs{order.amount.toLocaleString()}</td>
-                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenSm}`}>{order.date}</td>
+              {dashboardData.recentOrders.map(order => {
+                const orderNumber = order.orderNumber || order._id?.slice(-8).toUpperCase();
+                const customerName = order.customer?.firstName && order.customer?.lastName 
+                  ? `${order.customer.firstName} ${order.customer.lastName}`
+                  : 'Customer';
+                const productName = order.items?.[0]?.product?.name || 'Product';
+                const orderDate = (order.orderDate || order.createdAt) ? new Date(order.orderDate || order.createdAt).toLocaleDateString('en-IN', { 
+                  day: 'numeric', 
+                  month: 'short' 
+                }) : 'Unknown';
+                const orderStatus = order.vendorStatus || order.status || 'pending';
+                const totalAmount = order.total || 0;
+                
+                return <tr key={order._id} className="ordersTableBody tr">
+                  <td className={`${styles.ordersTableCell} ${styles.orderId}`}>{orderNumber}</td>
+                  <td className={`${styles.ordersTableCell} text-foreground`}>{customerName}</td>
+                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenMd}`}>{productName}</td>
+                  <td className={`${styles.ordersTableCell} text-foreground font-semibold`}>Rs{totalAmount.toLocaleString()}</td>
+                  <td className={`${styles.ordersTableCell} text-muted-foreground ${styles.hiddenSm}`}>{orderDate}</td>
                   <td className={styles.ordersTableCell}>
-                    <span className={`${styles.statusBadge} ${getStatusClass(order.status)}`}>{order.status}</span>
+                    <span className={`${styles.statusBadge} ${getStatusClass(orderStatus)}`}>{orderStatus}</span>
                   </td>
-                </tr>)}
+                </tr>;
+              })}
             </tbody>
           </table>
         </div>
@@ -324,23 +366,7 @@ export default function VendorDashboard() {
         <div className={styles.recentActivity}>
           <h2 className={styles.sectionTitle}>Recent Activity</h2>
           <div className={styles.activityList}>
-            {[{
-            text: "New order #ORD-2847 received",
-            time: "2 hours ago",
-            icon: ShoppingBag
-          }, {
-            text: "Product 'Gold Pendant Chain' stock low",
-            time: "5 hours ago",
-            icon: Package
-          }, {
-            text: "Payment of Rs85,000 settled",
-            time: "1 day ago",
-            icon: IndianRupee
-          }, {
-            text: "Customer reviewed 'Diamond Studs' ",
-            time: "2 days ago",
-            icon: Eye
-          }].map((activity, i) => <div key={i} className={styles.activityItem}>
+            {dashboardData.recentActivity.map((activity, i) => <div key={i} className={styles.activityItem}>
                 <div className={styles.activityIcon}>
                   <activity.icon />
                 </div>

@@ -21,15 +21,19 @@
   --gray-800: #1f2937;
   --gray-900: #111827;
 }
+body {
+  margin: 0;
+}
 
 /* Main container */
 .registerPage {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1rem;
+  padding: 0.5rem 0.5rem;
   position: relative;
+  overflow: hidden;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -43,6 +47,8 @@
 
 .container {
   width: 100%;
+  transform: scale(0.96);
+    transform-origin: center;
   max-width: 32rem;
   position: relative;
   z-index: 10;
@@ -347,7 +353,8 @@
   text-align: center;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.8);
-  margin-top: 1.5rem;
+  margin-top: 0;
+    
 }
 
 .footerLink {

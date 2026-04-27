@@ -261,6 +261,24 @@
   background-color: #f3f4f6;
 }
 
+.actionButton.success {
+  color: #059669;
+}
+
+.actionButton.success:hover {
+  color: #047857;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.actionButton.danger {
+  color: #dc2626;
+}
+
+.actionButton.danger:hover {
+  color: #b91c1c;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
 .actionButton svg {
   height: 1rem;
   width: 1rem;

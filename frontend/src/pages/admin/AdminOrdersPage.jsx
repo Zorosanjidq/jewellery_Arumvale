@@ -1,90 +1,42 @@
-import { useState } from "react";
-import { Search, Filter, Eye, Download, Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Filter, Eye, Download, Package, Truck, CheckCircle, Clock, XCircle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import axios from "axios";
 import styles from "./AdminOrdersPage.module.css";
-const orders = [{
-  id: "ORD-3201",
-  customer: "Priya Sharma",
-  vendor: "Tanishq",
-  amount: "₹2,45,000",
-  items: 2,
-  status: "Completed",
-  date: "Mar 19, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-3200",
-  customer: "Rahul Verma",
-  vendor: "Kalyan",
-  amount: "₹85,000",
-  items: 1,
-  status: "Processing",
-  date: "Mar 19, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-3199",
-  customer: "Anita Patel",
-  vendor: "Malabar Gold",
-  amount: "₹1,20,000",
-  items: 3,
-  status: "Shipped",
-  date: "Mar 18, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-3198",
-  customer: "Vikram Singh",
-  vendor: "Joyalukkas",
-  amount: "₹65,000",
-  items: 1,
-  status: "Completed",
-  date: "Mar 18, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-3197",
-  customer: "Meera Joshi",
-  vendor: "Tanishq",
-  amount: "₹3,10,000",
-  items: 2,
-  status: "Cancelled",
-  date: "Mar 17, 2026",
-  payment: "Refunded"
-}, {
-  id: "ORD-3196",
-  customer: "Arjun Nair",
-  vendor: "Kalyan",
-  amount: "₹45,000",
-  items: 1,
-  status: "Pending",
-  date: "Mar 17, 2026",
-  payment: "Pending"
-}];
 const getStatusConfig = (status) => {
   switch(status) {
-    case "Completed":
+    case "delivered":
       return {
         style: styles.statusCompleted,
         icon: CheckCircle
       };
-    case "Processing":
+    case "processing":
       return {
         style: styles.statusProcessing,
         icon: Package
       };
-    case "Shipped":
+    case "shipped":
       return {
         style: styles.statusShipped,
         icon: Truck
       };
-    case "Pending":
+    case "pending":
       return {
         style: styles.statusPending,
         icon: Clock
       };
-    case "Cancelled":
+    case "cancelled":
       return {
         style: styles.statusCancelled,
         icon: XCircle
+      };
+    case "confirmed":
+      return {
+        style: styles.statusProcessing,
+        icon: Package
       };
     default:
       return {
@@ -95,25 +47,124 @@ const getStatusConfig = (status) => {
 };
 
 export default function AdminOrdersPage() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const filtered = orders.filter(o => o.id.toLowerCase().includes(search.toLowerCase()) || o.customer.toLowerCase().includes(search.toLowerCase()));
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0
+  });
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:5000/api/admin/orders", {
+          withCredentials: true
+        });
+        const orderList = response.data.orders || [];
+        setOrders(orderList);
+        
+        // Fetch stats from admin endpoint
+        const statsResponse = await axios.get("http://localhost:5000/api/admin/orders/stats", {
+          withCredentials: true
+        });
+        const statsData = statsResponse.data;
+        setStats({
+          total: statsData.total || 0,
+          pending: statsData.pending || 0,
+          confirmed: statsData.confirmed || 0,
+          processing: statsData.processing || 0,
+          shipped: statsData.shipped || 0,
+          delivered: statsData.delivered || 0,
+          cancelled: statsData.cancelled || 0
+        });
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  const filtered = orders.filter(o => 
+    (o.orderNumber?.toLowerCase().includes(search.toLowerCase()) || o._id?.toLowerCase().includes(search.toLowerCase())) || 
+    (o.customer?.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+     o.customer?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+     `${o.customer?.firstName} ${o.customer?.lastName}`?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleViewOrder = async (order) => {
+    try {
+      setActionLoading(true);
+      const response = await axios.get(`http://localhost:5000/api/admin/orders/${order._id}`, {
+        withCredentials: true
+      });
+      setSelectedOrder(response.data);
+      setShowDetailsModal(true);
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const getVendorDisplay = (order) => {
+    if (!order.vendors || order.vendors.length === 0) {
+      return "Unknown";
+    }
+    if (order.vendors.length === 1) {
+      return order.vendors[0].vendor?.username || "Unknown";
+    }
+    return "Multiple Vendors";
+  };
+
+  const formatCustomerName = (customer) => {
+    if (!customer) return "Unknown";
+    return `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || "Unknown";
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  if (loading) {
+    return <div className={styles.container}>
+        <div className="flex items-center justify-center py-20">
+          <Package className="animate-spin h-8 w-8 text-primary" />
+        </div>
+      </div>;
+  }
   return <div className={styles.container}>
       <div className={styles.summaryGrid}>
         {[{
         label: "Total Orders",
-        value: "3,200"
+        value: stats.total.toString()
       }, {
-        label: "Completed",
-        value: "2,480"
+        label: "Pending",
+        value: stats.pending.toString()
       }, {
         label: "Processing",
-        value: "320"
+        value: stats.processing.toString()
       }, {
         label: "Shipped",
-        value: "280"
+        value: stats.shipped.toString()
+      }, {
+        label: "Delivered",
+        value: stats.delivered.toString()
       }, {
         label: "Cancelled",
-        value: "120"
+        value: stats.cancelled.toString()
       }].map(s => <Card key={s.label} className={styles.summaryCard}>
             <CardContent className={styles.summaryCardContent}>
               <p className={styles.summaryLabel}>{s.label}</p>
@@ -154,19 +205,25 @@ export default function AdminOrdersPage() {
                 {filtered.map(o => {
                 const sc = getStatusConfig(o.status);
                 const StatusIcon = sc.icon;
-                return <tr key={o.id} className="tableBody tr">
-                      <td className={`${styles.tableCell} ${styles.orderId}`}>{o.id}</td>
-                      <td className={`${styles.tableCell} text-foreground`}>{o.customer}</td>
-                      <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{o.vendor}</td>
-                      <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenSm}`}>{o.amount}</td>
+                return <tr key={o._id} className="tableBody tr">
+                      <td className={`${styles.tableCell} ${styles.orderId}`}>{o.orderNumber || `ORD${o._id?.slice(-8)?.toUpperCase()}`}</td>
+                      <td className={`${styles.tableCell} text-foreground`}>{formatCustomerName(o.customer)}</td>
+                      <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{getVendorDisplay(o)}</td>
+                      <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenSm}`}>₹{o.total?.toLocaleString() || "0"}</td>
                       <td className={styles.tableCell}>
                         <span className={`${styles.statusBadge} ${sc.style}`}>
-                          <StatusIcon className={styles.statusIcon} /> {o.status}
+                          <StatusIcon className={styles.statusIcon} /> {o.status?.charAt(0)?.toUpperCase() + o.status?.slice(1)}
                         </span>
                       </td>
-                      <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenLg}`}>{o.date}</td>
+                      <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenLg}`}>{formatDate(o.orderDate || o.createdAt)}</td>
                       <td className={styles.tableCell}>
-                        <button className={styles.actionButton}><Eye className="h-4 w-4" /></button>
+                        <button 
+                          className={styles.actionButton}
+                          onClick={() => handleViewOrder(o)}
+                          disabled={actionLoading}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>;
               })}
@@ -175,5 +232,169 @@ export default function AdminOrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Order Details Modal */}
+      {showDetailsModal && selectedOrder && (
+        <div className={styles.modalOverlay} onClick={() => setShowDetailsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>Order Details</h2>
+              <button 
+                className={styles.closeButton}
+                onClick={() => setShowDetailsModal(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.orderInfo}>
+                <div className={styles.orderHeader}>
+                  <div>
+                    <h3>{selectedOrder.orderNumber || `ORD${selectedOrder._id?.slice(-8)?.toUpperCase()}`}</h3>
+                    <p className={styles.orderDate}>Order Date: {formatDate(selectedOrder.orderDate || selectedOrder.createdAt)}</p>
+                  </div>
+                  <div className={styles.orderStatus}>
+                    <Badge variant={selectedOrder.status === "delivered" ? "default" : "secondary"}>
+                      {selectedOrder.status?.charAt(0)?.toUpperCase() + selectedOrder.status?.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className={styles.infoSection}>
+                  <h4>Customer Information</h4>
+                  <div className={styles.infoGrid}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Name:</span>
+                      <span>{formatCustomerName(selectedOrder.customer)}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Email:</span>
+                      <span>{selectedOrder.customer?.email || "N/A"}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Phone:</span>
+                      <span>{selectedOrder.customer?.phone || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.infoSection}>
+                  <h4>Shipping Address</h4>
+                  <div className={styles.address}>
+                    <p>{selectedOrder.shippingAddress?.fullName}</p>
+                    <p>{selectedOrder.shippingAddress?.address}</p>
+                    <p>{selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} {selectedOrder.shippingAddress?.pincode}</p>
+                    <p>{selectedOrder.shippingAddress?.country}</p>
+                    <p>Phone: {selectedOrder.shippingAddress?.phone}</p>
+                  </div>
+                </div>
+
+                <div className={styles.infoSection}>
+                  <h4>Order Items</h4>
+                  <div className={styles.itemsList}>
+                    {selectedOrder.items?.map((item, index) => (
+                      <div key={index} className={styles.orderItem}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{item.product?.name || "Unknown Product"}</span>
+                          <span className={styles.itemDetails}>Qty: {item.quantity} × ₹{item.price?.toLocaleString() || "0"}</span>
+                        </div>
+                        <span className={styles.itemTotal}>₹{item.total?.toLocaleString() || "0"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedOrder.vendors && selectedOrder.vendors.length > 0 && (
+                  <div className={styles.infoSection}>
+                    <h4>Vendor Breakdown</h4>
+                    <div className={styles.vendorsList}>
+                      {selectedOrder.vendors.map((vendor, index) => (
+                        <div key={index} className={styles.vendorInfo}>
+                          <div className={styles.vendorName}>{vendor.vendor?.username || "Unknown Vendor"}</div>
+                          <div className={styles.vendorDetails}>
+                            <span>Items: {vendor.items?.length || 0}</span>
+                            <span>Subtotal: ₹{vendor.subtotal?.toLocaleString() || "0"}</span>
+                            <span>Status: {vendor.status?.charAt(0)?.toUpperCase() + vendor.status?.slice(1)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.infoSection}>
+                  <h4>Payment Information</h4>
+                  <div className={styles.paymentInfo}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Method:</span>
+                      <span>{selectedOrder.paymentMethod?.toUpperCase() || "N/A"}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Status:</span>
+                      <Badge variant={selectedOrder.paymentStatus === "paid" ? "default" : "secondary"}>
+                        {selectedOrder.paymentStatus?.charAt(0)?.toUpperCase() + selectedOrder.paymentStatus?.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.label}>Payment ID:</span>
+                      <span>{selectedOrder.paymentId || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.orderTotals}>
+                  <div className={styles.totalRow}>
+                    <span>Subtotal:</span>
+                    <span>₹{selectedOrder.subtotal?.toLocaleString() || "0"}</span>
+                  </div>
+                  <div className={styles.totalRow}>
+                    <span>Tax:</span>
+                    <span>₹{selectedOrder.tax?.toLocaleString() || "0"}</span>
+                  </div>
+                  <div className={styles.totalRow}>
+                    <span>Shipping:</span>
+                    <span>₹{selectedOrder.shipping?.toLocaleString() || "0"}</span>
+                  </div>
+                  {selectedOrder.discount > 0 && (
+                    <div className={styles.totalRow}>
+                      <span>Discount:</span>
+                      <span>-₹{selectedOrder.discount?.toLocaleString() || "0"}</span>
+                    </div>
+                  )}
+                  <div className={`${styles.totalRow} ${styles.grandTotal}`}>
+                    <span>Total:</span>
+                    <span>₹{selectedOrder.total?.toLocaleString() || "0"}</span>
+                  </div>
+                </div>
+
+                {selectedOrder.trackingNumber && (
+                  <div className={styles.infoSection}>
+                    <h4>Tracking Information</h4>
+                    <div className={styles.trackingInfo}>
+                      <div className={styles.infoItem}>
+                        <span className={styles.label}>Tracking Number:</span>
+                        <span>{selectedOrder.trackingNumber}</span>
+                      </div>
+                      {selectedOrder.estimatedDelivery && (
+                        <div className={styles.infoItem}>
+                          <span className={styles.label}>Estimated Delivery:</span>
+                          <span>{formatDate(selectedOrder.estimatedDelivery)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedOrder.adminNotes && (
+                  <div className={styles.infoSection}>
+                    <h4>Admin Notes</h4>
+                    <p className={styles.adminNotes}>{selectedOrder.adminNotes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>;
 }

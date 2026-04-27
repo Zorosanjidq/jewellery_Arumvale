@@ -1,60 +1,8 @@
-import { Search, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Download, Loader2 } from "lucide-react";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 import styles from "./VendorOrdersPage.module.css";
-const orders = [{
-  id: "ORD-2847",
-  customer: "Priya Sharma",
-  email: "priya@email.com",
-  product: "Royal Diamond Necklace",
-  amount: 245000,
-  status: "Delivered",
-  date: "Mar 14, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-2846",
-  customer: "Rahul Mehta",
-  email: "rahul@email.com",
-  product: "Solitaire Gold Ring",
-  amount: 85000,
-  status: "Shipped",
-  date: "Mar 13, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-2845",
-  customer: "Anita Desai",
-  email: "anita@email.com",
-  product: "Classic Gold Bangle",
-  amount: 120000,
-  status: "Processing",
-  date: "Mar 12, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-2844",
-  customer: "Vikram Singh",
-  email: "vikram@email.com",
-  product: "Diamond Stud Earrings",
-  amount: 175000,
-  status: "Pending",
-  date: "Mar 11, 2026",
-  payment: "Pending"
-}, {
-  id: "ORD-2843",
-  customer: "Meera Patel",
-  email: "meera@email.com",
-  product: "Gold Pendant Chain",
-  amount: 65000,
-  status: "Delivered",
-  date: "Mar 10, 2026",
-  payment: "Paid"
-}, {
-  id: "ORD-2842",
-  customer: "Arjun Nair",
-  email: "arjun@email.com",
-  product: "Silver Anklet",
-  amount: 12000,
-  status: "Cancelled",
-  date: "Mar 09, 2026",
-  payment: "Refunded"
-}];
 const getStatusClass = (status) => {
   switch(status) {
     case "Delivered":
@@ -101,6 +49,172 @@ const getSummaryBorderClass = (status) => {
 };
 
 export default function VendorOrdersPage() {
+  const { user } = useAuth();
+  const [allOrders, setAllOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [updatingOrders, setUpdatingOrders] = useState(new Set());
+  const [orderStatuses, setOrderStatuses] = useState({});
+  const [trackingNumbers, setTrackingNumbers] = useState({});
+
+  const fetchOrders = async (search = '', status = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (status && status !== 'All Status') params.append('status', status.toLowerCase());
+      
+      const response = await axios.get(
+        `http://localhost:5000/api/orders/vendor/my?${params}`,
+        { withCredentials: true }
+      );
+      
+      const fetchedOrders = response.data.orders || [];
+      setAllOrders(fetchedOrders);
+      setOrders(fetchedOrders);
+      
+      // Initialize order statuses and tracking numbers
+      const initialStatuses = {};
+      const initialTracking = {};
+      fetchedOrders.forEach(order => {
+        initialStatuses[order._id] = order.vendorStatus || order.status || 'pending';
+        initialTracking[order._id] = order.vendorTrackingNumber || order.trackingNumber || '';
+      });
+      setOrderStatuses(initialStatuses);
+      setTrackingNumbers(initialTracking);
+    } catch (error) {
+      console.error('Error fetching vendor orders:', error);
+      setError(error.response?.data?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get valid next statuses based on current status
+  const getValidStatusTransitions = (currentStatus) => {
+    const transitions = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: ['refunded'],
+      cancelled: [],
+      refunded: []
+    };
+    return transitions[currentStatus] || [];
+  };
+
+  const handleStatusChange = (orderId, newStatus) => {
+    setOrderStatuses(prev => ({ ...prev, [orderId]: newStatus }));
+  };
+
+  const handleTrackingChange = (orderId, trackingNumber) => {
+    setTrackingNumbers(prev => ({ ...prev, [orderId]: trackingNumber }));
+  };
+
+  const updateOrderStatus = async (orderId) => {
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(orderId));
+      
+      const status = orderStatuses[orderId];
+      const trackingNumber = trackingNumbers[orderId];
+      
+      const response = await axios.put(
+        `http://localhost:5000/api/orders/${orderId}/status`,
+        { status, trackingNumber },
+        { withCredentials: true }
+      );
+      
+      // Refresh orders
+      await fetchOrders();
+      
+      // Show success message
+      alert('Order status updated successfully');
+      
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert(error.response?.data?.message || 'Failed to update order status');
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders(); // Fetch all orders initially
+  }, []);
+
+  // Apply client-side filtering
+  useEffect(() => {
+    // Apply client-side filtering only when allOrders has data
+    if (allOrders.length === 0) return;
+    
+    let filtered = allOrders;
+
+    
+
+    if (searchTerm) {
+      filtered = filtered.filter(order => 
+        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer?.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter && statusFilter !== 'All Status') {
+      filtered = filtered.filter(order => 
+        (order.vendorStatus || order.status || 'pending').toLowerCase() === statusFilter.toLowerCase()
+      );
+    }
+
+
+    setOrders(filtered);
+  }, [allOrders, searchTerm, statusFilter]);
+
+  // Calculate summary statistics from ALL orders (not filtered)
+  const summaryStats = allOrders.reduce((acc, order) => {
+    const status = (order.vendorStatus || order.status || 'pending').toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const summaryCards = [
+    { label: "Pending", count: summaryStats.pending || 0, status: "Pending" },
+    { label: "Processing", count: summaryStats.processing || 0, status: "Processing" },
+    { label: "Shipped", count: summaryStats.shipped || 0, status: "Shipped" },
+    { label: "Delivered", count: summaryStats.delivered || 0, status: "Delivered" }
+  ];
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <Loader2 className="animate-spin" />
+          <p>Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorContainer}>
+          <p>Error: {error}</p>
+          <button onClick={fetchOrders} className={styles.retryButton}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   return <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerContent}>
@@ -116,9 +230,19 @@ export default function VendorOrdersPage() {
       <div className={styles.filters}>
         <div className={styles.searchContainer}>
           <Search className={styles.searchIcon} />
-          <input type="text" placeholder="Search by order ID, customer..." className={styles.searchInput} />
+          <input 
+            type="text" 
+            placeholder="Search by order ID, customer..." 
+            className={styles.searchInput}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        <select className={styles.statusFilter}>
+        <select 
+          className={styles.statusFilter}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option>All Status</option>
           <option>Pending</option>
           <option>Processing</option>
@@ -130,23 +254,7 @@ export default function VendorOrdersPage() {
 
       {/* Summary cards */}
       <div className={styles.summaryGrid}>
-        {[{
-        label: "Pending",
-        count: 1,
-        status: "Pending"
-      }, {
-        label: "Processing",
-        count: 1,
-        status: "Processing"
-      }, {
-        label: "Shipped",
-        count: 1,
-        status: "Shipped"
-      }, {
-        label: "Delivered",
-        count: 2,
-        status: "Delivered"
-      }].map(s => <div key={s.label} className={`${styles.summaryCard} ${getSummaryBorderClass(s.status)}`}>
+        {summaryCards.map(s => <div key={s.label} className={`${styles.summaryCard} ${getSummaryBorderClass(s.status)}`}>
             <p className={styles.summaryLabel}>{s.label}</p>
             <p className={styles.summaryCount}>{s.count}</p>
           </div>)}
@@ -168,20 +276,71 @@ export default function VendorOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map(o => <tr key={o.id} className="tableBody tr">
-                  <td className={`${styles.tableCell} ${styles.orderId}`}>{o.id}</td>
+              {orders.map(o => {
+                const orderNumber = o.orderNumber || o._id?.slice(-8).toUpperCase();
+                const customerName = o.customer?.firstName && o.customer?.lastName 
+                  ? `${o.customer.firstName} ${o.customer.lastName}`
+                  : 'Customer';
+                const customerEmail = o.customer?.email || '';
+                const productName = o.items?.[0]?.product?.name || 'Product';
+                const orderDate = (o.orderDate || o.createdAt) ? new Date(o.orderDate || o.createdAt).toLocaleDateString('en-IN', { 
+                  day: 'numeric', 
+                  month: 'short', 
+                  year: 'numeric' 
+                }) : 'Unknown';
+                const orderStatus = o.vendorStatus || o.status || 'pending';
+                const paymentStatus = o.paymentStatus || 'pending';
+                const totalAmount = o.total || 0;
+
+                return <tr key={o._id || o.id} className="tableBody tr">
+                  <td className={`${styles.tableCell} ${styles.orderId}`}>{orderNumber}</td>
                   <td className={styles.tableCell}>
-                    <p className={styles.customerName}>{o.customer}</p>
-                    <p className={styles.customerEmail}>{o.email}</p>
+                    <p className={styles.customerName}>{customerName}</p>
+                    {customerEmail && <p className={styles.customerEmail}>{customerEmail}</p>}
                   </td>
-                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenLg}`}>{o.product}</td>
-                  <td className={`${styles.tableCell} ${styles.amount}`}>Rs{o.amount.toLocaleString()}</td>
-                  <td className={`${styles.tableCell} ${getPaymentClass(o.payment)} ${styles.hiddenSm}`}>{o.payment}</td>
-                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{o.date}</td>
+                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenLg}`}>{productName}</td>
+                  <td className={`${styles.tableCell} ${styles.amount}`}>Rs{totalAmount.toLocaleString()}</td>
+                  <td className={`${styles.tableCell} ${getPaymentClass(paymentStatus)} ${styles.hiddenSm}`}>{paymentStatus}</td>
+                  <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{orderDate}</td>
                   <td className={styles.tableCell}>
-                    <span className={`${styles.statusBadge} ${getStatusClass(o.status)}`}>{o.status}</span>
+                    <div className={styles.statusControls}>
+                      <select 
+                        value={orderStatuses[o._id] || orderStatus}
+                        onChange={(e) => handleStatusChange(o._id, e.target.value)}
+                        className={`${styles.statusSelect} ${getStatusClass(orderStatuses[o._id] || orderStatus)}`}
+                        disabled={updatingOrders.has(o._id)}
+                      >
+                        <option value={orderStatus}>{orderStatus}</option>
+                        {getValidStatusTransitions(orderStatuses[o._id] || orderStatus).map(nextStatus => (
+                          <option key={nextStatus} value={nextStatus}>{nextStatus}</option>
+                        ))}
+                      </select>
+                      
+                      {(orderStatuses[o._id] === 'shipped' || orderStatus === 'shipped') && (
+                        <input 
+                          type="text"
+                          placeholder="Tracking #"
+                          value={trackingNumbers[o._id] || ''}
+                          onChange={(e) => handleTrackingChange(o._id, e.target.value)}
+                          className={styles.trackingInput}
+                          disabled={updatingOrders.has(o._id)}
+                        />
+                      )}
+                      
+                      {(orderStatuses[o._id] !== orderStatus || 
+                        (orderStatuses[o._id] === 'shipped' && trackingNumbers[o._id] !== (o.vendorTrackingNumber || o.trackingNumber))) && (
+                        <button 
+                          onClick={() => updateOrderStatus(o._id)}
+                          disabled={updatingOrders.has(o._id)}
+                          className={styles.updateButton}
+                        >
+                          {updatingOrders.has(o._id) ? 'Updating...' : 'Update'}
+                        </button>
+                      )}
+                    </div>
                   </td>
-                </tr>)}
+                </tr>;
+              })}
             </tbody>
           </table>
         </div>

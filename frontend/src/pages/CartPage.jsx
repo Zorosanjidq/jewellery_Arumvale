@@ -1,12 +1,16 @@
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { Link } from "react-router-dom";
+import { getImageUrl } from "@/utils/getImageUrl";
 import LoginPrompt from "@/components/LoginPrompt";
 import styles from "./CartPage.module.css";
+
 export default function CartPage() {
   const { isLoggedIn } = useAuth();
   const { items, removeFromCart, updateQuantity, clearCart, getCartTotal } = useCart();
+  const navigate = useNavigate();
 
   if (!isLoggedIn) {
     return <LoginPrompt title="Sign In to View Cart" description="Log in to add items to your cart and start shopping from India's finest jewellers." icon={<ShoppingCart className="h-10 w-10 text-primary" />} />;
@@ -62,7 +66,7 @@ export default function CartPage() {
           {items.map((item) => (
             <div key={item._id} className={styles.cartItem}>
               <div className={styles.itemImage}>
-                <img src={item.images?.[0] || '/placeholder.svg'} alt={item.name} />
+                <img src={getImageUrl(item.images?.[0])} alt={item.name} />
               </div>
               <div className={styles.itemDetails}>
                 <h3 className={styles.itemName}>{item.name}</h3>
@@ -123,7 +127,7 @@ export default function CartPage() {
               <span>Total</span>
               <span>Rs{cartTotal.toLocaleString()}</span>
             </div>
-            <button className={styles.checkoutButton}>
+            <button className={styles.checkoutButton} onClick={() => navigate('/checkout')}>
               Proceed to Checkout
               <ArrowRight className="h-4 w-4" />
             </button>

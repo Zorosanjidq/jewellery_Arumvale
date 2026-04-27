@@ -67,11 +67,11 @@ export const registerUser = async (req, res) => {
       phone,
       dob: dob ? new Date(dob) : undefined,
       gender,
-      address: address || {
-        fullAddress: "",
-        city: "",
-        state: "",
-        pincode: "",
+      address: {
+        fullAddress: address || "",
+        city: city || "",
+        state: state || "",
+        pincode: pincode || "",
         country: "India",
       },
     };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Eye, Ban, Star, Loader2 } from "lucide-react";
+import { Search, Filter, Eye, Ban, Star, Loader2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [stats, setStats] = useState({
     totalProducts: 0,
     activeListings: 0,
@@ -22,16 +25,22 @@ export default function AdminProductsPage() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:5000/api/products", {
+        const response = await axios.get("http://localhost:5000/api/admin/products", {
           withCredentials: true
         });
         const productList = response.data.products || [];
         setProducts(productList);
+        
+        // Fetch stats from admin endpoint
+        const statsResponse = await axios.get("http://localhost:5000/api/admin/products/stats", {
+          withCredentials: true
+        });
+        const statsData = statsResponse.data;
         setStats({
-          totalProducts: productList.length,
-          activeListings: productList.filter(p => p.status === "active").length,
-          flagged: 0,
-          avgRating: 0
+          totalProducts: statsData.total || 0,
+          activeListings: statsData.active || 0,
+          flagged: statsData.draft || 0,
+          avgRating: statsData.averageRating || 0
         });
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -43,6 +52,53 @@ export default function AdminProductsPage() {
   }, []);
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleViewProduct = async (product) => {
+    try {
+      setActionLoading(true);
+      const response = await axios.get(`http://localhost:5000/api/admin/products/${product._id}`, {
+        withCredentials: true
+      });
+      setSelectedProduct(response.data);
+      setShowDetailsModal(true);
+    } catch (error) {
+      console.error("Error fetching product details:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleProductStatus = async (product) => {
+    try {
+      setActionLoading(true);
+      const newStatus = product.status === "active" ? "draft" : "active";
+      await axios.put(`http://localhost:5000/api/admin/products/${product._id}/toggle-status`, 
+        { status: newStatus },
+        { withCredentials: true }
+      );
+      
+      // Update local state
+      setProducts(prev => prev.map(p => 
+        p._id === product._id ? { ...p, status: newStatus } : p
+      ));
+      
+      // Refresh stats
+      const statsResponse = await axios.get("http://localhost:5000/api/admin/products/stats", {
+        withCredentials: true
+      });
+      const statsData = statsResponse.data;
+      setStats({
+        totalProducts: statsData.total || 0,
+        activeListings: statsData.active || 0,
+        flagged: statsData.draft || 0,
+        avgRating: statsData.averageRating || 0
+      });
+    } catch (error) {
+      console.error("Error toggling product status:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return <div className={styles.container}>
@@ -60,7 +116,7 @@ export default function AdminProductsPage() {
         label: "Active Listings",
         value: stats.activeListings.toString()
       }, {
-        label: "Flagged",
+        label: "Draft",
         value: stats.flagged.toString()
       }, {
         label: "Avg. Rating",
@@ -101,23 +157,43 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(p => <tr key={p.id} className="tableBody tr">
+                {filtered.map(p => <tr key={p._id} className="tableBody tr">
                     <td className={styles.tableCell}>
                       <div className={styles.productCell}>
-                        <img src={p.image} alt={p.name} className={styles.productImage} />
+                        <div className={p.status === "draft" ? styles.blockedProductOverlay : ""}>
+                          <img 
+                            src={p.images?.[0] ? `http://localhost:5000${p.images[0]}` : "/placeholder.svg"} 
+                            alt={p.name} 
+                            className={`${styles.productImage} ${p.status === "draft" ? styles.blockedProductImage : ""}`}
+                            onError={(e) => {
+                              e.target.src = "/placeholder.svg";
+                            }}
+                          />
+                        </div>
                         <div className={styles.productInfo}>
-                          <p className={styles.productName}>{p.name}</p>
+                          <p className={`${styles.productName} ${p.status === "draft" ? styles.blockedProductName : ""}`}>{p.name}</p>
                           <p className={styles.productPurity}>{p.purity}</p>
+                          <div className={styles.statusBadgeContainer}>
+                            <Badge 
+                              variant={p.status === "active" ? "default" : "secondary"}
+                              className={`${styles.statusBadge} ${p.status === "draft" ? styles.blockedBadge : ""}`}
+                            >
+                              {p.status === "active" ? "Active" : "Blocked"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{p.vendor}</td>
+                    <td className={`${styles.tableCell} text-muted-foreground ${styles.hiddenMd}`}>{p.vendor?.username || 'Unknown'}</td>
                     <td className={`${styles.tableCell} text-foreground font-medium`}>Rs{p.price.toLocaleString()}</td>
                     <td className={`${styles.tableCell} ${styles.hiddenSm}`}>
                       <Badge variant="secondary" className={styles.categoryBadge}>{p.category}</Badge>
                     </td>
                     <td className={`${styles.tableCell} ${styles.hiddenLg}`}>
-                      <span className={styles.ratingDisplay}><Star className={styles.ratingStar} />{p.rating}</span>
+                      <span className={styles.ratingDisplay}>
+                        <Star className={styles.ratingStar} />
+                        {p.averageRating > 0 ? p.averageRating.toFixed(1) : "N/A"}
+                      </span>
                     </td>
                     <td className={`${styles.tableCell} ${styles.hiddenLg}`}>
                       <span className={`${styles.stockDisplay} ${p.stock <= 5 ? styles.stockLow : ''}`}>
@@ -126,8 +202,21 @@ export default function AdminProductsPage() {
                     </td>
                     <td className={styles.tableCell}>
                       <div className={styles.actionCell}>
-                        <button className={styles.actionButton}><Eye className="h-4 w-4" /></button>
-                        <button className={`${styles.actionButton} ${styles.danger}`}><Ban className="h-4 w-4" /></button>
+                        <button 
+                          className={styles.actionButton}
+                          onClick={() => handleViewProduct(p)}
+                          disabled={actionLoading}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className={`${styles.actionButton} ${p.status === "draft" ? styles.unblockButton : styles.danger}`}
+                          onClick={() => handleToggleProductStatus(p)}
+                          disabled={actionLoading}
+                          title={p.status === "active" ? "Block Product" : "Unblock Product"}
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>)}
@@ -136,5 +225,89 @@ export default function AdminProductsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Product Details Modal */}
+      {showDetailsModal && selectedProduct && (
+        <div className={styles.modalOverlay} onClick={() => setShowDetailsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>Product Details</h2>
+              <button 
+                className={styles.closeButton}
+                onClick={() => setShowDetailsModal(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.productImages}>
+                {selectedProduct.images?.map((image, index) => (
+                  <img 
+                    key={index}
+                    src={`http://localhost:5000${image}`}
+                    alt={`${selectedProduct.name} ${index + 1}`}
+                    className={styles.modalImage}
+                    onError={(e) => {
+                      e.target.src = "/placeholder.svg";
+                    }}
+                  />
+                ))}
+              </div>
+              <div className={styles.productInfo}>
+                <h3>{selectedProduct.name}</h3>
+                <p className={styles.description}>{selectedProduct.description}</p>
+                
+                <div className={styles.productDetails}>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Vendor:</span>
+                    <span>{selectedProduct.vendor?.username || 'Unknown'}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Category:</span>
+                    <Badge variant="secondary">{selectedProduct.category}</Badge>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Price:</span>
+                    <span className={styles.price}>Rs{selectedProduct.price.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Stock:</span>
+                    <span className={selectedProduct.stock <= 5 ? styles.lowStock : ''}>
+                      {selectedProduct.stock} {selectedProduct.stock <= 5 && '(Low)'}
+                    </span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Purity:</span>
+                    <span>{selectedProduct.purity}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Weight:</span>
+                    <span>{selectedProduct.weight}g</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Status:</span>
+                    <Badge variant={selectedProduct.status === "active" ? "default" : "secondary"}>
+                      {selectedProduct.status === "active" ? "Active" : "Blocked"}
+                    </Badge>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Created:</span>
+                    <span>{new Date(selectedProduct.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.label}>Rating:</span>
+                    <span>
+                      {selectedProduct.averageRating > 0 
+                        ? `${selectedProduct.averageRating.toFixed(1)} (${selectedProduct.reviewCount} reviews)`
+                        : "No reviews"
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>;
 }

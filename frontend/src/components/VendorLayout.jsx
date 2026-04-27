@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, PlusCircle, Package, ShoppingBag, Warehouse, TrendingUp, ChevronLeft, Store, Bell, Search, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import styles from "./VendorLayout.module.css";
 const navItems = [{
   label: "Dashboard",
@@ -27,21 +29,34 @@ const navItems = [{
   path: "/vendor/analytics",
   icon: TrendingUp
 }];
-const bottomNav = [{
-  label: "Settings",
-  path: "/vendor/settings",
-  icon: Settings
-}, {
-  label: "Help Center",
-  path: "/vendor/help",
-  icon: HelpCircle
-}];
+;
 export default function VendorLayout() {
   const location = useLocation();
   const {
     user,
     logout
   } = useAuth();
+  const [orderCount, setOrderCount] = useState(0);
+
+  // Fetch vendor order count
+  useEffect(() => {
+    const fetchOrderCount = async () => {
+      try {
+        const response = await axios.get(
+          'http://localhost:5000/api/orders/vendor/my',
+          { withCredentials: true }
+        );
+        setOrderCount(response.data.orders?.length || 0);
+      } catch (error) {
+        console.error('Error fetching order count:', error);
+        setOrderCount(0);
+      }
+    };
+
+    if (user?.role === 'vendor') {
+      fetchOrderCount();
+    }
+  }, [user]);
   return <div className={styles.layout}>
       {/* Sidebar */}
       <aside className={styles.sidebar}>
@@ -83,16 +98,14 @@ export default function VendorLayout() {
           return <Link key={item.path} to={item.path} className={`${styles.navItem} ${active ? styles.active : ''}`}>
                 <item.icon className={styles.navIcon} />
                 {item.label}
-                {item.label === "Orders" && <span className="ml-auto text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold">3</span>}
+                {item.label === "Orders" && orderCount > 0 && (
+                  <span className="ml-auto text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold">{orderCount}</span>
+                )}
               </Link>;
         })}
 
           <div className="my-3 border-t border-sidebar-border" />
-          <p className={styles.navSectionTitle}>Support</p>
-          {bottomNav.map(item => <Link key={item.path} to={item.path} className={styles.navItem}>
-              <item.icon className={styles.navIcon} />
-              {item.label}
-            </Link>)}
+         
         </nav>
 
         {/* Sidebar Footer */}

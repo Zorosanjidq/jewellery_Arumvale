@@ -1,9 +1,9 @@
+import { Link } from "react-router-dom";
+import { X, Award, GitCompareArrows, Star, Trophy } from "lucide-react";
 import { useCompare } from "@/context/CompareContext";
 import { useAuth } from "@/context/AuthContext";
-import { Star, Trophy, Award, TrendingUp, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { getImageUrl } from "@/utils/getImageUrl";
 import LoginPrompt from "@/components/LoginPrompt";
-import { GitCompareArrows } from "lucide-react";
 import styles from "./ComparePage.module.css";
 // Helper: Convert purity string to tiered numeric (0.5-5 range)
 const getPurityValue = (purity) => {
@@ -111,11 +111,27 @@ export default function ComparePage() {
   }
   const bestRating = [...compareItems].sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))[0];
   const { bestOverall, productsWithScores } = calculateBestOverall(compareItems);
+  const allNoRatings = compareItems.every(p => p.reviewCount === 0);
   const rows = [{
     label: "Price",
     key: "price",
     format: v => `₹${v.toLocaleString()}`,
     highlight: "min"
+  }, {
+    label: "Original Price",
+    key: "comparePrice",
+    format: v => v ? `₹${v.toLocaleString()}` : "N/A",
+    highlight: "min"
+  }, {
+    label: "Discount",
+    key: "discountPercent",
+    format: (v, product) => {
+      if (!product.comparePrice || product.comparePrice <= product.price) return "N/A";
+      const percent = Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100);
+      return `${percent}%`;
+    },
+    highlight: "max",
+    useProductObject: true
   }, {
     label: "Weight",
     key: "weight",
@@ -127,7 +143,7 @@ export default function ComparePage() {
     label: "Rating",
     key: "averageRating",
     format: v => v ? `${v}/5` : "N/A",
-    highlight: "max"
+    highlight: allNoRatings ? null : "max"
   }, {
     label: "Value Score",
     key: "valueScore",
@@ -139,14 +155,24 @@ export default function ComparePage() {
     key: "vendor",
     format: v => v?.username || "Unknown Vendor"
   }];
-  const getBest = (key, type, useScoredProducts = false) => {
+  const getBest = (key, type, useScoredProducts = false, useProductObject = false) => {
     if (key === "vendor") return null;
     const sourceProducts = useScoredProducts ? productsWithScores : compareItems;
+    
+    if (useProductObject) {
+      // For derived values like discount percentage
+      const vals = sourceProducts.map(p => {
+        if (key === "discountPercent") {
+          if (!p.comparePrice || p.comparePrice <= p.price) return 0;
+          return Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100);
+        }
+        return p[key];
+      });
+      return type === "max" ? Math.max(...vals) : Math.min(...vals);
+    }
+    
     const vals = sourceProducts.map(p => p[key]);
     return type === "max" ? Math.max(...vals) : Math.min(...vals);
-  };
-  const getImageUrl = (product) => {
-    return product.images?.[0] ? `${import.meta.env.VITE_API_URL}${product.images[0]}` : '/placeholder.svg';
   };
   return <div className={styles.container}>
       <div className={styles.header}>
@@ -190,7 +216,7 @@ export default function ComparePage() {
                     <button onClick={() => removeFromCompare(product._id)} className={styles.removeButton}>
                       <X className="h-3 w-3" />
                     </button>
-                    <img src={getImageUrl(product)} alt={product.name} className={styles.productImage} />
+                    <img src={getImageUrl(product.images?.[0])} alt={product.name} className={styles.productImage} />
                     <p className={styles.productName}>{product.name}</p>
                     {product._id === bestOverall._id && <span className={styles.bestPickBadge}>
                         <Award className="h-3 w-3" /> Best Pick
@@ -204,8 +230,8 @@ export default function ComparePage() {
                 <td className={styles.featureCell}>{row.label}</td>
                 {(row.useScoredProducts ? productsWithScores : compareItems).map(product => {
               const val = product[row.key];
-              const formatted = row.format ? row.format(val) : val;
-              const isBest = row.highlight && val === getBest(row.key, row.highlight, row.useScoredProducts);
+              const formatted = row.format ? (row.useProductObject ? row.format(val, product) : row.format(val)) : val;
+              const isBest = row.highlight && val === getBest(row.key, row.highlight, row.useScoredProducts, row.useProductObject);
               return <td key={product._id} className={`${styles.valueCell} ${isBest ? styles.bestValue : ''} ${product._id === bestOverall._id ? styles.bestPick : ''}`}>
                       {formatted}
                       {isBest && <span className={styles.valueStar}>★</span>}

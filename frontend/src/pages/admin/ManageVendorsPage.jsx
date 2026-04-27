@@ -39,6 +39,8 @@ export default function ManageVendorsPage() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [showVendorDetails, setShowVendorDetails] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -132,6 +134,11 @@ export default function ManageVendorsPage() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleViewVendor = (vendor) => {
+    setSelectedVendor(vendor);
+    setShowVendorDetails(true);
   };
 
   const getStatusConfig = (vendor) => {
@@ -228,7 +235,6 @@ export default function ManageVendorsPage() {
                   <th className={styles.tableCell}>Vendor</th>
                   <th className={`${styles.tableCell} ${styles.hiddenMd}`}>Products</th>
                   <th className={`${styles.tableCell} ${styles.hiddenSm}`}>Revenue</th>
-                  <th className={`${styles.tableCell} ${styles.hiddenLg}`}>Fulfillment</th>
                   <th className={styles.tableCell}>Status</th>
                   <th className={styles.tableCell}></th>
                 </tr>
@@ -246,12 +252,6 @@ export default function ManageVendorsPage() {
                       </td>
                       <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenMd}`}>{v.totalProducts || 0}</td>
                       <td className={`${styles.tableCell} text-foreground font-medium ${styles.hiddenSm}`}>${(v.totalSales || 0).toLocaleString()}</td>
-                      <td className={`${styles.tableCell} ${styles.hiddenLg}`}>
-                        <div className={styles.fulfillmentContainer}>
-                          <Progress value={85} className={styles.fulfillmentProgress} />
-                          <span className={styles.fulfillmentText}>85%</span>
-                        </div>
-                      </td>
                       <td className={styles.tableCell}>
                         <span className={`${styles.statusBadge} ${sc.style}`}>
                           <StatusIcon className={styles.statusIcon} /> {sc.status}
@@ -276,7 +276,7 @@ export default function ManageVendorsPage() {
                                 {v.isActive ? <Ban className="h-4 w-4 mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                                 {v.isActive ? "Suspend" : "Activate"}
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewVendor(v)}>
                                 <Eye className="h-4 w-4 mr-2" /> View Details
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -290,5 +290,195 @@ export default function ManageVendorsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Vendor Details Modal */}
+      {showVendorDetails && selectedVendor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-semibold">Vendor Details</h2>
+              <button 
+                onClick={() => setShowVendorDetails(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Shop Information */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Shop Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Shop Name</label>
+                    <p className="text-lg">{selectedVendor.shopName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Shop Type</label>
+                    <p className="text-lg capitalize">{selectedVendor.shopType || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Years in Business</label>
+                    <p className="text-lg">{selectedVendor.yearsInBusiness || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Website</label>
+                    <p className="text-lg">
+                      {selectedVendor.website ? (
+                        <a href={selectedVendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {selectedVendor.website}
+                        </a>
+                      ) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Information */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Owner Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Full Name</label>
+                    <p className="text-lg">
+                      {selectedVendor.user?.firstName && selectedVendor.user?.lastName 
+                        ? `${selectedVendor.user.firstName} ${selectedVendor.user.lastName}`
+                        : selectedVendor.user?.firstName || 'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Email</label>
+                    <p className="text-lg">{selectedVendor.user?.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Phone</label>
+                    <p className="text-lg">{selectedVendor.user?.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Joined Date</label>
+                    <p className="text-lg">{new Date(selectedVendor.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Information */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Status Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Vendor Status</label>
+                    <p className="text-lg">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        !selectedVendor.isActive 
+                          ? styles.statusSuspended 
+                          : selectedVendor.isVerified 
+                            ? styles.statusVerified 
+                            : styles.statusPending
+                      }`}>
+                        {!selectedVendor.isActive 
+                          ? "Suspended" 
+                          : selectedVendor.isVerified 
+                            ? "Verified" 
+                            : "Pending"
+                        }
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Approval Status</label>
+                    <p className="text-lg">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedVendor.user?.isApproved 
+                          ? styles.statusVerified 
+                          : styles.statusPending
+                      }`}>
+                        {selectedVendor.user?.isApproved ? "Approved" : "Pending Approval"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Performance */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Business Performance</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-3 rounded">
+                    <p className="text-sm text-gray-600">Total Products</p>
+                    <p className="text-2xl font-bold text-blue-600">{selectedVendor.totalProducts || 0}</p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded">
+                    <p className="text-sm text-gray-600">Total Revenue</p>
+                    <p className="text-2xl font-bold text-green-600">${(selectedVendor.totalSales || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Documents */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Business Documents</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">GST Number</label>
+                    <p className="text-lg">{selectedVendor.gstNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">PAN Number</label>
+                    <p className="text-lg">{selectedVendor.panNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">BIS Hallmark</label>
+                    <p className="text-lg">{selectedVendor.bisHallmark || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Bank Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Bank Name</label>
+                    <p className="text-lg">{selectedVendor.bankName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Account Number</label>
+                    <p className="text-lg">****{selectedVendor.accountNumber?.slice(-4) || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">IFSC Code</label>
+                    <p className="text-lg">{selectedVendor.ifscCode || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    handleToggleVendorStatus(selectedVendor._id, !selectedVendor.isActive);
+                    setShowVendorDetails(false);
+                  }}
+                  className={`px-4 py-2 rounded text-white ${
+                    !selectedVendor.isActive 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {!selectedVendor.isActive ? 'Activate Vendor' : 'Suspend Vendor'}
+                </button>
+                <button
+                  onClick={() => setShowVendorDetails(false)}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>;
 }

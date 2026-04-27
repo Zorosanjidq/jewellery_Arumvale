@@ -15,11 +15,15 @@ export const createOrder = async (req, res) => {
 
     // Validate required fields
     if (!items || items.length === 0) {
-      return res.status(400).json({ message: "Order must contain at least one item" });
+      return res
+        .status(400)
+        .json({ message: "Order must contain at least one item" });
     }
 
     if (!shippingAddress || !billingAddress) {
-      return res.status(400).json({ message: "Shipping and billing addresses are required" });
+      return res
+        .status(400)
+        .json({ message: "Shipping and billing addresses are required" });
     }
 
     if (!paymentMethod) {
@@ -32,19 +36,21 @@ export const createOrder = async (req, res) => {
 
     for (const item of items) {
       const product = await Product.findById(item.product);
-      
+
       if (!product || product.isDeleted) {
-        return res.status(404).json({ message: `Product ${item.product} not found` });
+        return res
+          .status(404)
+          .json({ message: `Product ${item.product} not found` });
       }
 
       if (product.stock < item.quantity) {
-        return res.status(400).json({ 
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
         });
       }
 
       const itemTotal = product.price * item.quantity;
-      
+
       orderItems.push({
         product: product._id,
         quantity: item.quantity,
@@ -60,7 +66,7 @@ export const createOrder = async (req, res) => {
           subtotal: 0,
         });
       }
-      
+
       const vendorData = vendorsMap.get(product.vendor.toString());
       vendorData.items.push({
         product: product._id,
@@ -95,13 +101,13 @@ export const createOrder = async (req, res) => {
     // Update product stock
     for (const item of items) {
       await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.quantity }
+        $inc: { stock: -item.quantity },
       });
     }
 
     // Clear user's cart
     await User.findByIdAndUpdate(req.user._id, {
-      $set: { cart: [] }
+      $set: { cart: [] },
     });
 
     await order.save();
@@ -112,9 +118,13 @@ export const createOrder = async (req, res) => {
       .populate("items.product", "name images")
       .populate("vendors.vendor", "shopName email phone");
 
+    // Convert to object and add virtual fields
+    const orderObject = populatedOrder.toObject();
+    orderObject.orderNumber = `ORD${populatedOrder._id.toString().slice(-8).toUpperCase()}`;
+
     res.status(201).json({
       message: "Order created successfully",
-      order: populatedOrder,
+      order: orderObject,
     });
   } catch (error) {
     console.error("Create order error:", error);
@@ -218,10 +228,17 @@ export const getUserOrders = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Add orderNumber virtual field to each order
+    const ordersWithNumbers = orders.map((order) => {
+      const orderObject = order.toObject();
+      orderObject.orderNumber = `ORD${order._id.toString().slice(-8).toUpperCase()}`;
+      return orderObject;
+    });
+
     const total = await Order.countDocuments(filter);
 
     res.status(200).json({
-      orders,
+      orders: ordersWithNumbers,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -264,22 +281,29 @@ export const getVendorOrders = async (req, res) => {
       .skip((page - 1) * limit);
 
     // Filter orders to only show items from this vendor
-    const vendorOrders = orders.map(order => {
-      const vendorData = order.vendors.find(v => v.vendor.toString() === req.user._id.toString());
-      if (vendorData) {
-        const vendorItems = order.items.filter(item => {
-          return vendorData.items.some(vItem => vItem.product.toString() === item.product._id.toString());
-        });
-        
-        return {
-          ...order.toObject(),
-          items: vendorItems,
-          vendorStatus: vendorData.status,
-          vendorTrackingNumber: vendorData.trackingNumber,
-        };
-      }
-      return null;
-    }).filter(order => order !== null);
+    const vendorOrders = orders
+      .map((order) => {
+        const vendorData = order.vendors.find(
+          (v) => v.vendor.toString() === req.user._id.toString(),
+        );
+        if (vendorData) {
+          const vendorItems = order.items.filter((item) => {
+            return vendorData.items.some(
+              (vItem) =>
+                vItem.product.toString() === item.product._id.toString(),
+            );
+          });
+
+          return {
+            ...order.toObject(),
+            items: vendorItems,
+            vendorStatus: vendorData.status,
+            vendorTrackingNumber: vendorData.trackingNumber,
+          };
+        }
+        return null;
+      })
+      .filter((order) => order !== null);
 
     const total = await Order.countDocuments(filter);
 
@@ -310,12 +334,17 @@ export const getOrderById = async (req, res) => {
     }
 
     // Check if user is authorized to view this order
-    const isCustomer = order.customer._id.toString() === req.user._id.toString();
-    const isVendor = order.vendors.some(v => v.vendor._id.toString() === req.user._id.toString());
+    const isCustomer =
+      order.customer._id.toString() === req.user._id.toString();
+    const isVendor = order.vendors.some(
+      (v) => v.vendor._id.toString() === req.user._id.toString(),
+    );
     const isAdmin = req.user.role === "admin";
 
     if (!isCustomer && !isVendor && !isAdmin) {
-      return res.status(403).json({ message: "Not authorized to view this order" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to view this order" });
     }
 
     res.status(200).json(order);
@@ -337,32 +366,36 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     const isAdmin = req.user.role === "admin";
-    const isVendor = order.vendors.some(v => v.vendor._id.toString() === req.user._id.toString());
+    const isVendor = order.vendors.some(
+      (v) => v.vendor._id.toString() === req.user._id.toString(),
+    );
 
     if (!isAdmin && !isVendor) {
-      return res.status(403).json({ message: "Not authorized to update this order" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this order" });
     }
 
     // Validate status transitions
     const validTransitions = {
-      "pending": ["confirmed", "cancelled"],
-      "confirmed": ["processing", "cancelled"],
-      "processing": ["shipped", "cancelled"],
-      "shipped": ["delivered"],
-      "delivered": ["refunded"],
-      "cancelled": [],
-      "refunded": [],
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["processing", "cancelled"],
+      processing: ["shipped", "cancelled"],
+      shipped: ["delivered"],
+      delivered: ["refunded"],
+      cancelled: [],
+      refunded: [],
     };
 
     if (!validTransitions[order.status].includes(status)) {
-      return res.status(400).json({ 
-        message: `Cannot change order status from ${order.status} to ${status}` 
+      return res.status(400).json({
+        message: `Cannot change order status from ${order.status} to ${status}`,
       });
     }
 
     // Update order status
     order.status = status;
-    
+
     // Update timestamps
     const now = new Date();
     switch (status) {
@@ -383,7 +416,7 @@ export const updateOrderStatus = async (req, res) => {
         // Restore stock
         for (const item of order.items) {
           await Product.findByIdAndUpdate(item.product, {
-            $inc: { stock: item.quantity }
+            $inc: { stock: item.quantity },
           });
         }
         break;
@@ -396,7 +429,7 @@ export const updateOrderStatus = async (req, res) => {
     // If vendor is updating, update vendor-specific status
     if (isVendor) {
       const vendorIndex = order.vendors.findIndex(
-        v => v.vendor._id.toString() === req.user._id.toString()
+        (v) => v.vendor._id.toString() === req.user._id.toString(),
       );
       if (vendorIndex !== -1) {
         order.vendors[vendorIndex].status = status;
@@ -457,13 +490,15 @@ export const cancelOrder = async (req, res) => {
 
     // Check if user owns this order
     if (order.customer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to cancel this order" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to cancel this order" });
     }
 
     // Check if order can be cancelled
     if (!["pending", "confirmed"].includes(order.status)) {
-      return res.status(400).json({ 
-        message: "Order cannot be cancelled at this stage" 
+      return res.status(400).json({
+        message: "Order cannot be cancelled at this stage",
       });
     }
 
@@ -474,7 +509,7 @@ export const cancelOrder = async (req, res) => {
     // Restore stock
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity }
+        $inc: { stock: item.quantity },
       });
     }
 
@@ -493,7 +528,7 @@ export const cancelOrder = async (req, res) => {
 export const getOrderStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     let dateFilter = {};
     if (startDate || endDate) {
       dateFilter.orderDate = {};
@@ -509,31 +544,31 @@ export const getOrderStats = async (req, res) => {
           totalOrders: { $sum: 1 },
           totalRevenue: { $sum: "$total" },
           pendingOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
           },
           confirmedOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] },
           },
           processingOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "processing"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "processing"] }, 1, 0] },
           },
           shippedOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "shipped"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "shipped"] }, 1, 0] },
           },
           deliveredOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
           },
           cancelledOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
           },
           paidOrders: {
-            $sum: { $cond: [{ $eq: ["$paymentStatus", "paid"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$paymentStatus", "paid"] }, 1, 0] },
           },
           unpaidOrders: {
-            $sum: { $cond: [{ $eq: ["$paymentStatus", "pending"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$paymentStatus", "pending"] }, 1, 0] },
           },
-        }
-      }
+        },
+      },
     ]);
 
     const result = stats[0] || {

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Search, Plus, Eye, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Plus, Edit2, Trash2, Search, Filter, Loader2, Eye, Edit } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { getImageUrl } from "@/utils/getImageUrl";
 import axios from "axios";
 import styles from "./ManageProductsPage.module.css";
 const getStatusClass = (status) => {
@@ -121,7 +123,7 @@ export default function ManageProductsPage() {
             </thead>
             <tbody>
               {products.map((p) => {
-                const imageUrl = p.images?.[0] ? `${import.meta.env.VITE_API_URL}${p.images[0]}` : '/placeholder.svg';
+                const imageUrl = getImageUrl(p.images?.[0]);
                 return <tr key={p._id} className="tableBody tr">
                   <td className={styles.tableCell}>
                     <div className={styles.productCell}>

@@ -3,54 +3,89 @@ import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 
 // Create a new review
-export const createReview = async (req, res) => {
+export const createReview = async (req, res, next) => {
   try {
     const { productId, orderId, rating, title, content, images } = req.body;
 
+    console.log("Review submission request:", {
+      productId,
+      orderId,
+      rating,
+      title,
+      content,
+      userId: req.user._id,
+    });
+
     // Validate required fields
     if (!productId || !orderId || !rating || !title || !content) {
-      return res.status(400).json({ message: "All required fields must be provided" });
+      return res
+        .status(400)
+        .json({ message: "All required fields must be provided" });
     }
 
     // Validate rating
     if (rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 1 and 5" });
     }
 
     // Check if order exists and belongs to the customer
-    const order = await Order.findById(orderId);
-    
+    let order;
+    try {
+      order = await Order.findById(orderId);
+    } catch (dbError) {
+      console.error("Database error finding order:", dbError);
+      return res
+        .status(500)
+        .json({ message: "Database error while finding order" });
+    }
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
     if (order.customer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to review this order" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to review this order" });
     }
 
     // Check if order is delivered
     if (order.status !== "delivered") {
-      return res.status(400).json({ message: "Order must be delivered to be reviewed" });
+      console.log("Order status check failed:", {
+        orderId: order._id,
+        currentStatus: order.status,
+        expectedStatus: "delivered",
+        customer: req.user._id,
+      });
+      return res.status(400).json({
+        message: `Order must be delivered to be reviewed. Current status: ${order.status}`,
+      });
     }
 
     // Check if product is in the order
-    const productInOrder = order.items.some(item => 
-      item.product.toString() === productId
+    const productInOrder = order.items.some(
+      (item) => item.product.toString() === productId,
     );
 
     if (!productInOrder) {
-      return res.status(400).json({ message: "Product not found in this order" });
+      return res
+        .status(400)
+        .json({ message: "Product not found in this order" });
     }
 
     // Check if review already exists
     const existingReview = await Review.findOne({
       customer: req.user._id,
       product: productId,
-      order: orderId
+      order: orderId,
     });
 
     if (existingReview) {
-      return res.status(400).json({ message: "Review already exists for this product" });
+      return res
+        .status(400)
+        .json({ message: "Review already exists for this product" });
     }
 
     // Create review
@@ -63,17 +98,23 @@ export const createReview = async (req, res) => {
       content,
       images: images || [],
       isVerifiedPurchase: true,
-      status: "pending", // Reviews need admin approval
+      status: "pending", 
     });
 
     await review.save();
 
     res.status(201).json({
-      message: "Review submitted successfully. It will be visible after approval.",
-      review
+      message:
+        "Review submitted successfully. It will be visible after approval.",
+      review,
     });
   } catch (error) {
-    console.error("Create review error:", error);
+    console.error("Create review error:", {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      user: req.user?._id,
+    });
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,13 +129,13 @@ export const getProductReviews = async (req, res) => {
       rating,
       sortBy = "reviewDate",
       sortOrder = "desc",
-      verifiedOnly = false
+      verifiedOnly = false,
     } = req.query;
 
     // Build filter
     let filter = {
       product: productId,
-      status: "approved" // Only show approved reviews publicly
+      status: "approved", // Only show approved reviews publicly
     };
 
     if (rating) {
@@ -143,7 +184,7 @@ export const getCustomerReviews = async (req, res) => {
       limit = 10,
       status,
       sortBy = "reviewDate",
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = req.query;
 
     // Build filter
@@ -189,7 +230,7 @@ export const getVendorReviews = async (req, res) => {
       rating,
       status,
       sortBy = "reviewDate",
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = req.query;
 
     // Build filter
@@ -211,7 +252,7 @@ export const getVendorReviews = async (req, res) => {
       .populate({
         path: "product",
         match: { vendor: req.user._id },
-        select: "name images"
+        select: "name images",
       })
       .populate("customer", "firstName lastName")
       .sort(sort)
@@ -219,7 +260,7 @@ export const getVendorReviews = async (req, res) => {
       .skip((page - 1) * limit);
 
     // Filter out reviews for products not belonging to this vendor
-    const vendorReviews = reviews.filter(review => review.product);
+    const vendorReviews = reviews.filter((review) => review.product);
 
     const total = await Review.countDocuments(filter);
 
@@ -248,7 +289,7 @@ export const getAllReviews = async (req, res) => {
       productId,
       customerId,
       sortBy = "reviewDate",
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = req.query;
 
     // Build filter
@@ -328,7 +369,7 @@ export const updateReviewStatus = async (req, res) => {
 
     res.status(200).json({
       message: "Review status updated successfully",
-      review
+      review,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -347,7 +388,7 @@ export const respondToReview = async (req, res) => {
 
     const review = await Review.findById(reviewId).populate({
       path: "product",
-      select: "vendor"
+      select: "vendor",
     });
 
     if (!review) {
@@ -356,20 +397,22 @@ export const respondToReview = async (req, res) => {
 
     // Check if user is the vendor of the product
     if (review.product.vendor.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to respond to this review" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to respond to this review" });
     }
 
     review.vendorResponse = {
       content,
       respondedAt: new Date(),
-      respondedBy: req.user._id
+      respondedBy: req.user._id,
     };
 
     await review.save();
 
     res.status(200).json({
       message: "Response added successfully",
-      review
+      review,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -404,7 +447,7 @@ export const voteOnReview = async (req, res) => {
     res.status(200).json({
       message: "Vote recorded successfully",
       helpful: review.helpful,
-      notHelpful: review.notHelpful
+      notHelpful: review.notHelpful,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -427,7 +470,9 @@ export const deleteReview = async (req, res) => {
     const isAdmin = req.user.role === "admin";
 
     if (!isCustomer && !isAdmin) {
-      return res.status(403).json({ message: "Not authorized to delete this review" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this review" });
     }
 
     await Review.findByIdAndDelete(reviewId);
@@ -436,7 +481,7 @@ export const deleteReview = async (req, res) => {
     await review.updateRatings();
 
     res.status(200).json({
-      message: "Review deleted successfully"
+      message: "Review deleted successfully",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -447,7 +492,7 @@ export const deleteReview = async (req, res) => {
 export const getReviewStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     let dateFilter = {};
     if (startDate || endDate) {
       dateFilter.reviewDate = {};
@@ -462,32 +507,32 @@ export const getReviewStats = async (req, res) => {
           _id: null,
           totalReviews: { $sum: 1 },
           pendingReviews: {
-            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
           },
           approvedReviews: {
-            $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] },
           },
           rejectedReviews: {
-            $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] },
           },
           averageRating: { $avg: "$rating" },
           fiveStarReviews: {
-            $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] },
           },
           fourStarReviews: {
-            $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] },
           },
           threeStarReviews: {
-            $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] },
           },
           twoStarReviews: {
-            $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] },
           },
           oneStarReviews: {
-            $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] },
           },
-        }
-      }
+        },
+      },
     ]);
 
     const result = stats[0] || {

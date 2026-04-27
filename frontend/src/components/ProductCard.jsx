@@ -1,6 +1,7 @@
-import { Star, GitCompareArrows } from "lucide-react";
-import { useCompare } from "@/context/CompareContext";
 import { Link } from "react-router-dom";
+import { GitCompareArrows, Star } from "lucide-react";
+import { useCompare } from "@/context/CompareContext";
+import { getImageUrl } from "@/utils/getImageUrl";
 export default function ProductCard({
   product
 }) {
@@ -15,7 +16,7 @@ export default function ProductCard({
     e.stopPropagation();
     inCompare ? removeFromCompare(product._id) : addToCompare(product);
   };
-  const imageUrl = product.images?.[0] ? `${import.meta.env.VITE_API_URL}${product.images[0]}` : '/placeholder.svg';
+  const imageUrl = getImageUrl(product.images?.[0]);
   return <Link to={`/product/${product._id}`} className="group block">
       <div className="bg-card rounded-xl border border-border overflow-hidden card-hover">
         <div className="relative aspect-square overflow-hidden bg-muted">
@@ -33,7 +34,23 @@ export default function ProductCard({
           <p className="text-xs text-muted-foreground mb-1">{product.vendor?.username || 'Unknown Vendor'}</p>
           <h3 className="font-display font-semibold text-foreground mb-2 line-clamp-1">{product.name}</h3>
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-primary text-lg">₹{product.price.toLocaleString()}</p>
+            <div className="flex items-center gap-2">
+              {product.comparePrice && product.comparePrice > product.price ? (
+                <>
+                  <span className="text-sm text-muted-foreground line-through">
+                    ₹{product.comparePrice.toLocaleString()}
+                  </span>
+                  <span className="font-semibold text-primary text-lg">
+                    ₹{product.price.toLocaleString()}
+                  </span>
+                  <span className="px-2 py-0.5 bg-destructive text-destructive-foreground text-xs font-medium rounded-full">
+                    {Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)}% OFF
+                  </span>
+                </>
+              ) : (
+                <p className="font-semibold text-primary text-lg">₹{product.price.toLocaleString()}</p>
+              )}
+            </div>
             <div className="flex items-center gap-1 text-sm">
               <Star className="h-3.5 w-3.5 fill-primary text-primary" />
               <span className="font-medium text-foreground">{product.averageRating || 'No rating'}</span>

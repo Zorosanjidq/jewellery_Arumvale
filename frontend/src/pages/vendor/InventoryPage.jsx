@@ -2,6 +2,7 @@ import { AlertTriangle, Package, Search, ArrowUpDown, Loader2 } from "lucide-rea
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import { getImageUrl } from "@/utils/getImageUrl";
 import styles from "./InventoryPage.module.css";
 
 export default function InventoryPage() {
@@ -93,9 +94,10 @@ export default function InventoryPage() {
       <div className={styles.inventoryGrid}>
         {products.map(p => {
         const isLow = p.stock < 5;
-        return <div key={p.id} className={`${styles.inventoryCard} ${isLow ? styles.inventoryCardLowStock : ""}`}>
+        const imageUrl = getImageUrl(p.images?.[0]);
+        return <div key={p._id} className={`${styles.inventoryCard} ${isLow ? styles.inventoryCardLowStock : ""}`}>
               <div className={styles.inventoryHeader}>
-                <img src={p.image} alt={p.name} className={styles.productImage} />
+                <img src={imageUrl} alt={p.name} className={styles.productImage} />
                 <div className={styles.productInfo}>
                   <p className={styles.productName}>{p.name}</p>
                   <p className={styles.productMeta}>{p.purity} · {p.weight}g</p>

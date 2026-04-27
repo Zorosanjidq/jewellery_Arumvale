@@ -1,27 +1,9 @@
 import { User, Package, Heart, Settings, MapPin, Bell, ChevronRight, Star, ShoppingBag, GitCompareArrows, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { products } from "@/data/mockData";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-const recentOrders = [{
-  id: "ORD-2841",
-  product: "Royal Diamond Necklace",
-  date: "8 Mar 2026",
-  status: "Delivered",
-  amount: 245000
-}, {
-  id: "ORD-2839",
-  product: "Classic Gold Bangle",
-  date: "2 Mar 2026",
-  status: "Shipped",
-  amount: 120000
-}, {
-  id: "ORD-2835",
-  product: "Solitaire Gold Ring",
-  date: "22 Feb 2026",
-  status: "Delivered",
-  amount: 85000
-}];
+import axios from "axios";
+
 const quickLinks = [{
   icon: Package,
   label: "My Orders",
@@ -29,13 +11,13 @@ const quickLinks = [{
   path: "/orders"
 }, {
   icon: Heart,
-  label: "Wishlist",
-  desc: "12 saved items",
-  path: "/products"
+  label: "Cart",
+  desc: "See Cart items",
+  path: "/cart"
 }, {
   icon: GitCompareArrows,
   label: "Comparisons",
-  desc: "3 recent comparisons",
+  desc: "Compare products",
   path: "/compare"
 }, {
   icon: Settings,
@@ -46,6 +28,28 @@ const quickLinks = [{
 export default function ProfilePage() {
   const { user } = useAuth();
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  
+  // Fetch recent orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (user) {
+        setLoadingOrders(true);
+        try {
+          const response = await axios.get("http://localhost:5000/api/orders/my", {
+            withCredentials: true
+          });
+          setRecentOrders(response.data.orders?.slice(0, 3) || []);
+        } catch (error) {
+          console.error("Error fetching orders:", error);
+        } finally {
+          setLoadingOrders(false);
+        }
+      }
+    };
+    fetchOrders();
+  }, [user]);
   
   // Format member since date
   const memberSince = user?.createdAt 
@@ -142,30 +146,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[{
-        label: "Total Orders",
-        value: "14",
-        icon: ShoppingBag
-      }, {
-        label: "Wishlist Items",
-        value: "12",
-        icon: Heart
-      }, {
-        label: "Comparisons",
-        value: "8",
-        icon: GitCompareArrows
-      }, {
-        label: "Reward Points",
-        value: "2,450",
-        icon: Star
-      }].map(stat => <div key={stat.label} className="bg-card border border-border rounded-xl p-5 text-center hover:shadow-md transition-shadow">
-            <stat.icon className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="font-display text-2xl font-bold text-foreground">{stat.value}</p>
-            <p className="text-muted-foreground text-xs mt-1">{stat.label}</p>
-          </div>)}
-      </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Recent Orders */}
@@ -178,18 +158,38 @@ export default function ProfilePage() {
           </div>
 
           <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {recentOrders.map((order, i) => <div key={order.id} className={`flex items-center justify-between p-5 hover:bg-muted/50 transition-colors ${i < recentOrders.length - 1 ? "border-b border-border" : ""}`}>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm truncate">{order.product}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">{order.id} · {order.date}</p>
+            {loadingOrders ? (
+              <div className="p-8 text-center text-muted-foreground">
+                Loading orders...
+              </div>
+            ) : recentOrders.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                No orders yet. Start shopping to see your recent orders here.
+              </div>
+            ) : (
+              recentOrders.map((order, i) => (
+                <div key={order._id} className={`flex items-center justify-between p-5 hover:bg-muted/50 transition-colors ${i < recentOrders.length - 1 ? "border-b border-border" : ""}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">
+                      {order.items?.[0]?.product?.name || 'Order Items'}
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {order.orderNumber} · {new Date(order.orderDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <p className="font-semibold text-foreground text-sm">₹{order.total.toLocaleString()}</p>
+                    <span className={`text-xs font-medium ${
+                      order.status === "delivered" ? "text-green-600" : 
+                      order.status === "shipped" ? "text-blue-600" : 
+                      "text-yellow-600"
+                    }`}>
+                      {order.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="font-semibold text-foreground text-sm">₹{order.amount.toLocaleString()}</p>
-                  <span className={`text-xs font-medium ${order.status === "Delivered" ? "text-success" : "text-warning"}`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>)}
+              ))
+            )}
           </div>
         </div>
 
@@ -211,32 +211,5 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Recommended For You */}
-      <section className="mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-xl font-bold text-foreground">Recommended For You</h2>
-          <Link to="/products" className="text-xs text-primary hover:text-gold-dark transition-colors flex items-center gap-1">
-            See More <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.slice(0, 3).map(product => <Link key={product.id} to={`/product/${product.id}`} className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all">
-              <div className="aspect-[4/3] overflow-hidden bg-muted">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="p-4">
-                <p className="text-xs text-muted-foreground">{product.vendor}</p>
-                <h3 className="font-display font-semibold text-foreground text-sm mt-1 line-clamp-1">{product.name}</h3>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="font-semibold text-primary">₹{product.price.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Star className="h-3 w-3 fill-primary text-primary" />
-                    <span className="text-foreground font-medium">{product.rating}</span>
-                  </div>
-                </div>
-              </div>
-            </Link>)}
-        </div>
-      </section>
     </div>;
 }
