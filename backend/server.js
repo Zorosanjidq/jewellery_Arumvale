@@ -12,12 +12,14 @@ import orderRoutes from "./routes/orderRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import customRequestRoutes from "./routes/customRequestRoutes.js";
 import { serveStaticFiles } from "./utils/uploadConfig.js";
 import "./models/User.js";
 import "./models/Vendor.js";
 import "./models/Product.js";
 import "./models/Order.js";
 import "./models/Review.js";
+import "./models/CustomRequest.js";
 dotenv.config();
 connectDB();
 const app = express();
@@ -48,6 +50,8 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 app.use("/api/analytics", analyticsRoutes);
+
+app.use("/api/custom-requests", customRequestRoutes);
 
 // Serve static files for uploaded images
 serveStaticFiles(app);

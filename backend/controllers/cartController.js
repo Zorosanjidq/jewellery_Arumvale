@@ -6,7 +6,7 @@ export const getCart = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate({
       path: "cart.product",
-      select: "name images price stock vendor status isDeleted"
+      select: "name images price stock vendor status isDeleted",
     });
 
     if (!user) {
@@ -14,16 +14,18 @@ export const getCart = async (req, res) => {
     }
 
     // Filter out unavailable products
-    const availableCartItems = user.cart.filter(item => {
-      return item.product && 
-             !item.product.isDeleted && 
-             item.product.status === "active" && 
-             item.product.stock > 0;
+    const availableCartItems = user.cart.filter((item) => {
+      return (
+        item.product &&
+        !item.product.isDeleted &&
+        item.product.status === "active" &&
+        item.product.stock > 0
+      );
     });
 
     // Calculate totals
     const subtotal = availableCartItems.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      return total + item.product.price * item.quantity;
     }, 0);
 
     const tax = subtotal * 0.03; // 3% tax
@@ -37,8 +39,11 @@ export const getCart = async (req, res) => {
         tax,
         shipping,
         total,
-        itemCount: availableCartItems.reduce((count, item) => count + item.quantity, 0)
-      }
+        itemCount: availableCartItems.reduce(
+          (count, item) => count + item.quantity,
+          0,
+        ),
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -60,7 +65,7 @@ export const addToCart = async (req, res) => {
 
     // Check if product exists and is available
     const product = await Product.findById(productId);
-    
+
     if (!product || product.isDeleted) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -70,25 +75,37 @@ export const addToCart = async (req, res) => {
     }
 
     if (product.stock < quantity) {
-      return res.status(400).json({ 
-        message: `Insufficient stock. Available: ${product.stock}, Requested: ${quantity}` 
+      return res.status(400).json({
+        message: `Insufficient stock. Available: ${product.stock}, Requested: ${quantity}`,
       });
+    }
+
+    // Check custom product ownership
+    if (product.isCustom === true) {
+      if (
+        !product.customForCustomer ||
+        product.customForCustomer.toString() !== req.user._id.toString()
+      ) {
+        return res.status(403).json({
+          message: "Not authorized to purchase this custom product",
+        });
+      }
     }
 
     const user = await User.findById(req.user._id);
 
     // Check if product is already in cart
     const existingCartItem = user.cart.find(
-      item => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (existingCartItem) {
       // Update quantity if already in cart
       const newQuantity = existingCartItem.quantity + quantity;
-      
+
       if (product.stock < newQuantity) {
-        return res.status(400).json({ 
-          message: `Insufficient stock. Available: ${product.stock}, Requested: ${newQuantity}` 
+        return res.status(400).json({
+          message: `Insufficient stock. Available: ${product.stock}, Requested: ${newQuantity}`,
         });
       }
 
@@ -97,7 +114,7 @@ export const addToCart = async (req, res) => {
       // Add new item to cart
       user.cart.push({
         product: productId,
-        quantity
+        quantity,
       });
     }
 
@@ -106,13 +123,16 @@ export const addToCart = async (req, res) => {
     // Get updated cart with populated products
     const updatedUser = await User.findById(req.user._id).populate({
       path: "cart.product",
-      select: "name images price stock vendor status isDeleted"
+      select: "name images price stock vendor status isDeleted",
     });
 
     res.status(200).json({
       message: "Item added to cart successfully",
       cart: updatedUser.cart,
-      itemCount: updatedUser.cart.reduce((count, item) => count + item.quantity, 0)
+      itemCount: updatedUser.cart.reduce(
+        (count, item) => count + item.quantity,
+        0,
+      ),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -135,14 +155,14 @@ export const updateCartItem = async (req, res) => {
 
     // Check if product exists and has sufficient stock
     const product = await Product.findById(productId);
-    
+
     if (!product || product.isDeleted) {
       return res.status(404).json({ message: "Product not found" });
     }
 
     if (product.stock < quantity) {
-      return res.status(400).json({ 
-        message: `Insufficient stock. Available: ${product.stock}, Requested: ${quantity}` 
+      return res.status(400).json({
+        message: `Insufficient stock. Available: ${product.stock}, Requested: ${quantity}`,
       });
     }
 
@@ -150,7 +170,7 @@ export const updateCartItem = async (req, res) => {
 
     // Find the cart item
     const cartItem = user.cart.find(
-      item => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (!cartItem) {
@@ -163,13 +183,16 @@ export const updateCartItem = async (req, res) => {
     // Get updated cart with populated products
     const updatedUser = await User.findById(req.user._id).populate({
       path: "cart.product",
-      select: "name images price stock vendor status isDeleted"
+      select: "name images price stock vendor status isDeleted",
     });
 
     res.status(200).json({
       message: "Cart item updated successfully",
       cart: updatedUser.cart,
-      itemCount: updatedUser.cart.reduce((count, item) => count + item.quantity, 0)
+      itemCount: updatedUser.cart.reduce(
+        (count, item) => count + item.quantity,
+        0,
+      ),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -189,7 +212,7 @@ export const removeFromCart = async (req, res) => {
 
     // Remove item from cart
     user.cart = user.cart.filter(
-      item => item.product.toString() !== productId
+      (item) => item.product.toString() !== productId,
     );
 
     await user.save();
@@ -197,13 +220,16 @@ export const removeFromCart = async (req, res) => {
     // Get updated cart with populated products
     const updatedUser = await User.findById(req.user._id).populate({
       path: "cart.product",
-      select: "name images price stock vendor status isDeleted"
+      select: "name images price stock vendor status isDeleted",
     });
 
     res.status(200).json({
       message: "Item removed from cart successfully",
       cart: updatedUser.cart,
-      itemCount: updatedUser.cart.reduce((count, item) => count + item.quantity, 0)
+      itemCount: updatedUser.cart.reduce(
+        (count, item) => count + item.quantity,
+        0,
+      ),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -221,7 +247,7 @@ export const clearCart = async (req, res) => {
     res.status(200).json({
       message: "Cart cleared successfully",
       cart: [],
-      itemCount: 0
+      itemCount: 0,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -247,7 +273,7 @@ export const moveToWishlist = async (req, res) => {
 
     // Remove from cart
     user.cart = user.cart.filter(
-      item => item.product.toString() !== productId
+      (item) => item.product.toString() !== productId,
     );
 
     // Add to wishlist if not already there
@@ -260,7 +286,7 @@ export const moveToWishlist = async (req, res) => {
     res.status(200).json({
       message: "Item moved to wishlist successfully",
       cart: user.cart,
-      wishlist: user.wishlist
+      wishlist: user.wishlist,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -272,7 +298,7 @@ export const getCartSummary = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate({
       path: "cart.product",
-      select: "name images price stock status isDeleted"
+      select: "name images price stock status isDeleted",
     });
 
     if (!user) {
@@ -280,22 +306,27 @@ export const getCartSummary = async (req, res) => {
     }
 
     // Filter out unavailable products
-    const availableCartItems = user.cart.filter(item => {
-      return item.product && 
-             !item.product.isDeleted && 
-             item.product.status === "active" && 
-             item.product.stock > 0;
+    const availableCartItems = user.cart.filter((item) => {
+      return (
+        item.product &&
+        !item.product.isDeleted &&
+        item.product.status === "active" &&
+        item.product.stock > 0
+      );
     });
 
-    const itemCount = availableCartItems.reduce((count, item) => count + item.quantity, 0);
+    const itemCount = availableCartItems.reduce(
+      (count, item) => count + item.quantity,
+      0,
+    );
     const subtotal = availableCartItems.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      return total + item.product.price * item.quantity;
     }, 0);
 
     res.status(200).json({
       itemCount,
       subtotal,
-      estimatedTotal: subtotal + (subtotal * 0.03) + (subtotal > 1000 ? 0 : 50)
+      estimatedTotal: subtotal + subtotal * 0.03 + (subtotal > 1000 ? 0 : 50),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

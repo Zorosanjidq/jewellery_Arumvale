@@ -88,6 +88,19 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Custom product fields
+    isCustom: {
+      type: Boolean,
+      default: false,
+    },
+    customForCustomer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    customRequestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CustomRequest",
+    },
     // Rating fields
     averageRating: {
       type: Number,

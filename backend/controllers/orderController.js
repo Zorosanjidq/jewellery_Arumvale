@@ -49,6 +49,18 @@ export const createOrder = async (req, res) => {
         });
       }
 
+      // Check custom product ownership
+      if (product.isCustom === true) {
+        if (
+          !product.customForCustomer ||
+          product.customForCustomer.toString() !== req.user._id.toString()
+        ) {
+          return res.status(403).json({
+            message: "Not authorized to purchase this custom product",
+          });
+        }
+      }
+
       const itemTotal = product.price * item.quantity;
 
       orderItems.push({
