@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, PlusCircle, Package, ShoppingBag, Warehouse, TrendingUp, ChevronLeft, Store, Bell, Search, Settings, HelpCircle, LogOut, FileText, CheckCircle } from "lucide-react";
+import GlobalSearch from "@/components/GlobalSearch";
+import useVendorData from "@/hooks/useVendorData";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -46,7 +48,10 @@ export default function VendorLayout() {
   } = useAuth();
   const [orderCount, setOrderCount] = useState(0);
 
-  // Fetch vendor order count
+  // Use shared vendor data for badge computation
+  const { products, orders, requests, loading } = useVendorData();
+
+  // Fetch vendor order count (for existing orders badge)
   useEffect(() => {
     const fetchOrderCount = async () => {
       try {
@@ -65,6 +70,28 @@ export default function VendorLayout() {
       fetchOrderCount();
     }
   }, [user]);
+
+  // Compute notification badge count
+  const getNotificationBadgeCount = () => {
+    if (loading) return 0;
+
+    // 1. Pending orders needing vendor action (orders that are not "Delivered" or "Shipped")
+    const pendingOrders = orders.filter(order => 
+      order.status !== 'Delivered' && order.status !== 'Shipped'
+    ).length;
+
+    // 2. Low stock products (stock < 5)
+    const lowStockItems = products.filter(product => product.stock < 5).length;
+
+    // 3. Pending custom requests awaiting response
+    const pendingCustomRequests = requests.filter(request => 
+      request.status === 'pending' || request.status === 'under_review'
+    ).length;
+
+    return pendingOrders + lowStockItems + pendingCustomRequests;
+  };
+
+  const badgeCount = getNotificationBadgeCount();
   return <div className={styles.layout}>
       {/* Sidebar */}
       <aside className={styles.sidebar}>
@@ -131,28 +158,28 @@ export default function VendorLayout() {
       <div className={styles.main}>
         {/* Top bar */}
         <header className={styles.header}>
-          <div className="flex items-center justify-between px-4 md:px-8 h-16">
-            {/* Mobile brand */}
+          <div className="flex items-center w-full px-4 md:px-8 h-16">            {/* Mobile brand */}
             <div className="lg:hidden flex items-center gap-2">
               <Store className="h-5 w-5 text-primary" />
               <span className="font-display text-lg font-semibold text-primary">GoldVault</span>
             </div>
 
             {/* Search */}
-            <div className="hidden md:flex items-center flex-1 max-w-md">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input type="text" placeholder="Search products, orders..." className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
+            <div className="hidden md:flex items-center max-w-md">
+              <GlobalSearch />
             </div>
 
             {/* Right actions */}
             <div className={styles.headerActions}>
               <button className={styles.notificationButton}>
                 <Bell className="h-4 w-4 text-muted-foreground" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center font-bold">2</span>
+                {badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center font-bold">
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
               </button>
-              <div className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l border-border">
+              <div className="hidden md:flex items-center gap-2 pl-3 border-l border-border">
                 <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
                   {user?.username?.[0]?.toUpperCase() || "V"}
                 </div>

@@ -23,6 +23,37 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: hsl(var(--foreground));
+  background-color: #f8fafc;
+}
+
+.activeTab {
+  color: hsl(var(--foreground));
+  border-bottom-color: #f59e0b;
+  background-color: #f8fafc;
+}
+
 /* Loading State */
 .loadingContainer {
   display: flex;

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import GlobalSearch from "@/components/GlobalSearch";
 import styles from "./AdminLayout.module.css";
 const navItems = [{
   label: "Dashboard",
@@ -158,8 +159,7 @@ export default function AdminLayout() {
 
             <div className={styles.headerActions}>
               <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} />
-                <Input placeholder="Search anything..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={styles.searchInput} />
+                <GlobalSearch />
               </div>
               <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
                 <DropdownMenuTrigger asChild>

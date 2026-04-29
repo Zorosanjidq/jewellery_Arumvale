@@ -59,6 +59,7 @@ export const getVendorCustomRequests = async (req, res) => {
 
     const requests = await CustomRequest.find(filter)
       .populate("customer", "username firstName lastName")
+      .populate("convertedProduct", "name status images _id")
       .sort({ createdAt: -1 });
 
     // Lookup vendor profiles to get shop names
