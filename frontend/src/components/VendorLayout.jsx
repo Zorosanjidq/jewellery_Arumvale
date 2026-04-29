@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Package, ShoppingBag, Warehouse, TrendingUp, ChevronLeft, Store, Bell, Search, Settings, HelpCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Package, ShoppingBag, Warehouse, TrendingUp, ChevronLeft, Store, Bell, Search, Settings, HelpCircle, LogOut, FileText, CheckCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -20,6 +20,14 @@ const navItems = [{
   label: "Orders",
   path: "/vendor/orders",
   icon: ShoppingBag
+}, {
+  label: "Custom Requests",
+  path: "/vendor/custom-requests",
+  icon: FileText
+}, {
+  label: "Approved Requests",
+  path: "/vendor/approved-requests",
+  icon: CheckCircle
 }, {
   label: "Inventory",
   path: "/vendor/inventory",

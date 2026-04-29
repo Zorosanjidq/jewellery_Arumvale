@@ -27,8 +27,11 @@ router.use(approvedVendorOnly);
 // Create product (approved vendors only) - handle multipart/form-data
 router.post("/", uploadProductImages, createProduct);
 
-// Update product (vendor can only update their products)
-router.put("/:id", updateProduct);
+// Update product stock (vendor can only update their products) - handle application/json
+router.patch("/:id/stock", updateProduct);
+
+// Update product (vendor can only update their products) - handle multipart/form-data
+router.put("/:id", uploadProductImages, updateProduct);
 
 // Delete product (vendor can only delete their products)
 router.delete("/:id", deleteProduct);

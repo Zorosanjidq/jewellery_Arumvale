@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Eye, Download, Package, Truck, CheckCircle, Clock, XCircle, X } from "lucide-react";
+import { Search, Filter, Eye, Download, Package, Truck, CheckCircle, Clock, XCircle, X, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import axios from "axios";
 import styles from "./AdminOrdersPage.module.css";
 const getStatusConfig = (status) => {
@@ -50,6 +51,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -96,12 +98,22 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  const filtered = orders.filter(o => 
-    (o.orderNumber?.toLowerCase().includes(search.toLowerCase()) || o._id?.toLowerCase().includes(search.toLowerCase())) || 
-    (o.customer?.firstName?.toLowerCase().includes(search.toLowerCase()) || 
-     o.customer?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-     `${o.customer?.firstName} ${o.customer?.lastName}`?.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = orders.filter(o => {
+    const matchesSearch = o.orderNumber?.toLowerCase().includes(search.toLowerCase()) || 
+                         o._id?.toLowerCase().includes(search.toLowerCase()) || 
+                         (o.customer?.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+                          o.customer?.lastName?.toLowerCase().includes(search.toLowerCase()));
+    
+    if (statusFilter === "all") return matchesSearch;
+    if (statusFilter === "pending") return matchesSearch && o.status === "pending";
+    if (statusFilter === "processing") return matchesSearch && o.status === "processing";
+    if (statusFilter === "shipped") return matchesSearch && o.status === "shipped";
+    if (statusFilter === "delivered") return matchesSearch && o.status === "delivered";
+    if (statusFilter === "cancelled") return matchesSearch && o.status === "cancelled";
+    if (statusFilter === "confirmed") return matchesSearch && o.status === "confirmed";
+    
+    return matchesSearch;
+  });
 
   const handleViewOrder = async (order) => {
     try {
@@ -179,10 +191,47 @@ export default function AdminOrdersPage() {
             <CardTitle className={styles.tableTitle}>All Orders</CardTitle>
             <div className={styles.tableActions}>
               <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} />
-                <Input placeholder="Search orders..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
-              </div>
-              <Button variant="outline" size="sm" className={styles.filterButton}><Filter className="h-3.5 w-3.5" /> Filter</Button>
+                <div className="flex items-center gap-2">
+                  <Search className={styles.searchIcon} />
+                  <Input 
+                    placeholder="Search orders..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className={styles.searchInput} 
+                  />
+                </div>
+                </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={styles.filterButton}>
+                    <Filter className="h-3.5 w-3.5" /> Filter
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("pending")}>
+                    Pending Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("processing")}>
+                    Processing Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("shipped")}>
+                    Shipped Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("delivered")}>
+                    Delivered Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>
+                    Cancelled Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("confirmed")}>
+                    Confirmed Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" size="sm" className={styles.exportButton}><Download className="h-3.5 w-3.5" /> Export</Button>
             </div>
           </div>

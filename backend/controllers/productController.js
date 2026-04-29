@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import CustomRequest from "../models/CustomRequest.js";
 
 // Create a new product (approved vendors only)
 export const createProduct = async (req, res) => {
@@ -247,10 +248,47 @@ export const updateProduct = async (req, res) => {
       updateData.images = [...product.images, ...newImages];
     }
 
+    // Publish-time image cleanup for converted custom products
+    if (status === "active" && product.isCustom && product.customRequestId) {
+      try {
+        // Load original CustomRequest to get designImage
+        const customRequest = await CustomRequest.findById(
+          product.customRequestId,
+        );
+        if (!customRequest) {
+          return res.status(400).json({
+            message: "Original custom request not found.",
+          });
+        }
+
+        // Get current images (including any newly uploaded ones)
+        const currentImages = updateData.images || product.images;
+
+        // Remove designImage from product images
+        const filteredImages = currentImages.filter(
+          (image) => image !== customRequest.designImage,
+        );
+
+        // Update images in updateData
+        updateData.images = filteredImages;
+
+        // Block publish if no images remain after cleanup
+        if (filteredImages.length === 0) {
+          return res.status(400).json({
+            message: "Upload actual product photos before publishing.",
+          });
+        }
+      } catch (error) {
+        return res.status(500).json({
+          message: "Error processing custom request images.",
+        });
+      }
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(
       product._id,
       updateData,
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     ).populate("vendor", "username email");
 
     res.status(200).json({

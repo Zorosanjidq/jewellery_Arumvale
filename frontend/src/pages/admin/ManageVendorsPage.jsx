@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, MoreHorizontal, CheckCircle, Clock, XCircle, ExternalLink, Eye, Ban, Check } from "lucide-react";
+import { Search, Filter, MoreHorizontal, CheckCircle, Clock, XCircle, ExternalLink, Eye, Ban, Check, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ export default function ManageVendorsPage() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [showVendorDetails, setShowVendorDetails] = useState(false);
   const { toast } = useToast();
@@ -173,11 +174,18 @@ export default function ManageVendorsPage() {
     };
   };
 
-  const filtered = vendors.filter(v => 
-    v.shopName?.toLowerCase().includes(search.toLowerCase()) ||
-    v.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-    v.user?.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = vendors.filter(v => {
+    const matchesSearch = v.shopName?.toLowerCase().includes(search.toLowerCase()) ||
+                         v.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+                         v.user?.email?.toLowerCase().includes(search.toLowerCase());
+    
+    if (statusFilter === "all") return matchesSearch;
+    if (statusFilter === "verified") return matchesSearch && v.isVerified && v.isActive;
+    if (statusFilter === "pending") return matchesSearch && !v.user?.isApproved;
+    if (statusFilter === "suspended") return matchesSearch && !v.isActive;
+    
+    return matchesSearch;
+  });
 
   const stats = {
     total: vendors.length,
@@ -220,10 +228,38 @@ export default function ManageVendorsPage() {
             <CardTitle className={styles.tableTitle}>All Vendors</CardTitle>
             <div className={styles.tableActions}>
               <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} />
-                <Input placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
-              </div>
-              <Button variant="outline" size="sm" className={styles.filterButton}><Filter className="h-3.5 w-3.5" /> Filter</Button>
+                <div className="flex items-center gap-2">
+                  <Search className={styles.searchIcon} />
+                  <Input 
+                    placeholder="Search vendors..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className={styles.searchInput} 
+                  />
+                </div>
+                </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={styles.filterButton}>
+                    <Filter className="h-3.5 w-3.5" /> Filter
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Vendors
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("verified")}>
+                    Verified Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("pending")}>
+                    Pending Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("suspended")}>
+                    Suspended Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

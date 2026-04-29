@@ -1,7 +1,10 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Store, Package, ShoppingBag, FileText, ChevronLeft, Bell, Search, Settings, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, Users, Store, Package, ShoppingBag, FileText, ChevronLeft, Bell, Search, LogOut, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./AdminLayout.module.css";
 const navItems = [{
@@ -32,9 +35,54 @@ const navItems = [{
 export default function AdminLayout() {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const { logout } = useAuth();
   const currentPage = navItems.find(i => i.path === location.pathname)?.label || "Dashboard";
   
+  // Fetch notification data
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        // Fetch pending vendors
+        const vendorsResponse = await axios.get("http://localhost:5000/api/vendors", { withCredentials: true });
+        const pendingVendors = vendorsResponse.data.filter(v => v.status === 'Pending').length;
+        
+        // Fetch pending orders
+        const ordersResponse = await axios.get("http://localhost:5000/api/orders", { withCredentials: true });
+        const pendingOrders = ordersResponse.data.filter(o => o.status === 'pending').length;
+        
+        const notificationData = [];
+        if (pendingVendors > 0) {
+          notificationData.push({
+            id: 'pending-vendors',
+            type: 'vendor',
+            count: pendingVendors,
+            label: 'Pending vendor approvals',
+            link: '/admin/vendors',
+            icon: Store
+          });
+        }
+        if (pendingOrders > 0) {
+          notificationData.push({
+            id: 'pending-orders',
+            type: 'order',
+            count: pendingOrders,
+            label: 'New orders to process',
+            link: '/admin/orders',
+            icon: ShoppingBag
+          });
+        }
+        
+        setNotifications(notificationData);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+    
+    fetchNotifications();
+  }, []);
+
   const handleLogout = async () => {
     await logout();
   };
@@ -113,13 +161,41 @@ export default function AdminLayout() {
                 <Search className={styles.searchIcon} />
                 <Input placeholder="Search anything..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={styles.searchInput} />
               </div>
-              <button className={styles.notificationButton}>
-                <Bell className="h-5 w-5" />
-                <span className={styles.notificationBadge} />
-              </button>
-              <button className={styles.settingsButton}>
-                <Settings className="h-5 w-5" />
-              </button>
+              <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button className={styles.notificationButton}>
+                    <Bell className="h-5 w-5" />
+                    {notifications.length > 0 && (
+                      <span className={styles.notificationBadge} />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <div className="p-2">
+                    <h3 className="font-semibold text-sm mb-2">Notifications</h3>
+                    {notifications.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-2">No new notifications</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {notifications.map(notification => (
+                          <DropdownMenuItem key={notification.id} asChild>
+                            <Link to={notification.link} className="flex items-center gap-3 p-2 cursor-pointer">
+                              <notification.icon className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{notification.label}</p>
+                                <p className="text-xs text-muted-foreground">{notification.count} item{notification.count !== 1 ? 's' : ''}</p>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {notification.count}
+                              </Badge>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

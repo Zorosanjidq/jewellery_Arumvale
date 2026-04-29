@@ -17,6 +17,8 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProfilePage from "./pages/ProfilePage";
+import CustomRequestPage from "./pages/CustomRequestPage";
+import CustomRequestsPage from "./pages/CustomRequestsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import VendorRegisterPage from "./pages/VendorRegisterPage";
@@ -26,6 +28,8 @@ import ManageProductsPage from "./pages/vendor/ManageProductsPage";
 import VendorOrdersPage from "./pages/vendor/VendorOrdersPage";
 import InventoryPage from "./pages/vendor/InventoryPage";
 import SalesAnalyticsPage from "./pages/vendor/SalesAnalyticsPage";
+import VendorCustomRequestsPage from "./pages/vendor/VendorCustomRequestsPage";
+import ApprovedCustomRequestsPage from "./pages/vendor/ApprovedCustomRequestsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageUsersPage from "./pages/admin/ManageUsersPage";
 import ManageVendorsPage from "./pages/admin/ManageVendorsPage";
@@ -53,6 +57,8 @@ const App = () => <QueryClientProvider client={queryClient}>
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/custom-request" element={<CustomRequestPage />} />
+              <Route path="/custom-requests" element={<CustomRequestsPage />} />
             </Route>
 
             {/* Auth pages (no layout wrapper) */}
@@ -64,10 +70,13 @@ const App = () => <QueryClientProvider client={queryClient}>
             <Route element={<VendorLayout />}>
               <Route path="/vendor" element={<VendorDashboard />} />
               <Route path="/vendor/add-product" element={<AddProductPage />} />
+              <Route path="/vendor/edit-product/:id" element={<AddProductPage />} />
               <Route path="/vendor/products" element={<ManageProductsPage />} />
               <Route path="/vendor/orders" element={<VendorOrdersPage />} />
               <Route path="/vendor/inventory" element={<InventoryPage />} />
               <Route path="/vendor/analytics" element={<SalesAnalyticsPage />} />
+              <Route path="/vendor/custom-requests" element={<VendorCustomRequestsPage />} />
+              <Route path="/vendor/approved-requests" element={<ApprovedCustomRequestsPage />} />
             </Route>
 
             {/* Admin */}

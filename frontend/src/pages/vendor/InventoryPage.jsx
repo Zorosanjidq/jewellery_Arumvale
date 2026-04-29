@@ -3,12 +3,15 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { getImageUrl } from "@/utils/getImageUrl";
+import StockUpdateModal from "@/components/StockUpdateModal";
 import styles from "./InventoryPage.module.css";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -29,6 +32,34 @@ export default function InventoryPage() {
 
   const lowStock = products.filter(p => p.stock < 5).length;
   const totalUnits = products.reduce((sum, p) => sum + p.stock, 0);
+
+  // Handle opening stock update modal
+  const handleOpenStockModal = (product) => {
+    setSelectedProduct(product);
+    setStockModalOpen(true);
+  };
+
+  // Handle closing stock modal
+  const handleCloseStockModal = () => {
+    setStockModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  // Handle successful stock update - refresh inventory
+  const handleStockUpdateSuccess = () => {
+    // Refetch products to get updated data
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/products/my", {
+          withCredentials: true
+        });
+        setProducts(response.data.products || []);
+      } catch (error) {
+        console.error("Error refetching products:", error);
+      }
+    };
+    fetchProducts();
+  };
 
   if (loading) {
     return <div className={styles.container}>
@@ -117,11 +148,26 @@ export default function InventoryPage() {
               }} />
                 </div>
               </div>
-              <button className={styles.updateButton}>
+              <button 
+                className={styles.updateButton}
+                onClick={() => handleOpenStockModal(p)}
+              >
                 Update Stock
               </button>
             </div>;
       })}
       </div>
+      
+      {/* Stock Update Modal */}
+      {selectedProduct && (
+        <StockUpdateModal
+          productId={selectedProduct._id}
+          productName={selectedProduct.name}
+          currentStock={selectedProduct.stock}
+          isOpen={stockModalOpen}
+          onClose={handleCloseStockModal}
+          onSuccess={handleStockUpdateSuccess}
+        />
+      )}
     </div>;
 }

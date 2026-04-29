@@ -2,6 +2,7 @@ import express from "express";
 import {
   getVendorProfile,
   getAllVendors,
+  getApprovedVendors,
   updateVendorProfile,
   approveVendor,
   toggleVendorStatus,
@@ -12,7 +13,10 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// All routes require authentication
+// Public route for approved vendors (customer-facing)
+router.get("/approved", getApprovedVendors);
+
+// All other routes require authentication
 router.use(protect);
 
 // Vendor routes

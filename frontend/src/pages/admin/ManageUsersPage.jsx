@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, MoreHorizontal, Mail, UserPlus, Eye, Ban, Check, Loader2 } from "lucide-react";
+import { Search, Filter, MoreHorizontal, Mail, UserPlus, Eye, Ban, Check, Loader2, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
@@ -31,6 +32,7 @@ export default function ManageUsersPage() {
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const { toast } = useToast();
@@ -114,11 +116,17 @@ export default function ManageUsersPage() {
     }
   };
 
-  const filtered = users.filter(u => 
-    u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
-    u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = users.filter(u => {
+    const matchesSearch = u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+                         u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
+                         u.email?.toLowerCase().includes(search.toLowerCase());
+    
+    if (statusFilter === "all") return matchesSearch;
+    if (statusFilter === "active") return matchesSearch && u.isActive === true;
+    if (statusFilter === "suspended") return matchesSearch && u.isActive === false;
+    
+    return matchesSearch;
+  });
   if (loading) {
     return <div className={styles.container}>
       <div className="flex items-center justify-center py-20">
@@ -162,15 +170,35 @@ export default function ManageUsersPage() {
             <CardTitle className={styles.tableTitle}>All Users</CardTitle>
             <div className={styles.tableActions}>
               <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} />
-                <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
-              </div>
-              <Button variant="outline" size="sm" className={styles.filterButton}>
-                <Filter className="h-3.5 w-3.5" /> Filter
-              </Button>
-              <Button size="sm" className={styles.addButton}>
-                <UserPlus className="h-3.5 w-3.5" /> Add User
-              </Button>
+                <div className="flex items-center gap-2">
+                  <Search className={styles.searchIcon} />
+                  <Input 
+                    placeholder="Search users..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className={styles.searchInput} 
+                  />
+                </div>
+                </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={styles.filterButton}>
+                    <Filter className="h-3.5 w-3.5" /> Filter
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Users
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("active")}>
+                    Active Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("suspended")}>
+                    Suspended Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

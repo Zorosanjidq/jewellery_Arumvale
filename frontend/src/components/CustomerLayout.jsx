@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Home, Search, BarChart3, ShoppingCart, Package, User, Menu, X, LogIn, UserPlus, LogOut, Settings } from "lucide-react";
+import { Home, Search, BarChart3, ShoppingCart, Package, User, Menu, X, LogIn, UserPlus, LogOut, Palette } from "lucide-react";
 import { useCompare } from "@/context/CompareContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
@@ -13,6 +13,10 @@ const navItems = [{
   label: "Products",
   path: "/products",
   icon: Search
+}, {
+  label: "Custom Design",
+  path: "/custom-requests",
+  icon: Palette
 }, {
   label: "Compare",
   path: "/compare",
@@ -52,6 +56,10 @@ export default function CustomerLayout() {
           {/* Desktop nav */}
           <nav className={styles.navLinks}>
             {navItems.map(item => {
+            // Hide Custom Design for vendors and admins
+            if (item.label === "Custom Design" && user && (user.role === 'vendor' || user.role === 'admin')) {
+              return null;
+            }
             const active = location.pathname === item.path;
             return <Link key={item.path} to={item.path} className={`${styles.navLink} ${active ? styles.active : ''}`}>
                   <item.icon className="h-4 w-4" />
@@ -85,11 +93,6 @@ export default function CustomerLayout() {
                             <Package className="h-4 w-4" /> My Orders
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
-                            <Settings className="h-4 w-4" /> Settings
-                          </Link>
-                        </DropdownMenuItem>
                       </>
                     )}
                     
@@ -98,11 +101,6 @@ export default function CustomerLayout() {
                         <DropdownMenuItem asChild>
                           <Link to="/vendor" className="flex items-center gap-2 cursor-pointer">
                             <User className="h-4 w-4" /> Vendor Dashboard
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/vendor/profile" className="flex items-center gap-2 cursor-pointer">
-                            <Settings className="h-4 w-4" /> Settings
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -153,6 +151,10 @@ export default function CustomerLayout() {
         {/* Mobile nav */}
         {mobileMenuOpen && <nav className={`${styles.mobileMenu} ${styles.open}`}>
             {navItems.map(item => {
+          // Hide Custom Design for vendors and admins
+          if (item.label === "Custom Design" && user && (user.role === 'vendor' || user.role === 'admin')) {
+            return null;
+          }
           const active = location.pathname === item.path;
           return <Link key={item.path} to={item.path} onClick={() => setMobileMenuOpen(false)} className={`${styles.mobileMenuLink} ${active ? styles.active : ''}`}>
                   <item.icon className="h-4 w-4" />
@@ -170,9 +172,6 @@ export default function CustomerLayout() {
                         <Link to="/orders" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <Package className="h-4 w-4" /> My Orders
                         </Link>
-                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
-                          <Settings className="h-4 w-4" /> Settings
-                        </Link>
                       </>
                     )}
                     
@@ -180,9 +179,6 @@ export default function CustomerLayout() {
                       <>
                         <Link to="/vendor" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
                           <User className="h-4 w-4" /> Vendor Dashboard
-                        </Link>
-                        <Link to="/vendor/profile" onClick={() => setMobileMenuOpen(false)} className={styles.mobileMenuLink}>
-                          <Settings className="h-4 w-4" /> Settings
                         </Link>
                       </>
                     )}

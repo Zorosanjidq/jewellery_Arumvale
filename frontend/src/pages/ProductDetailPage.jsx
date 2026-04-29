@@ -27,6 +27,7 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const [activeImage, setActiveImage] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -36,6 +37,8 @@ export default function ProductDetailPage() {
           withCredentials: true
         });
         setProduct(response.data);
+        // Set active image to first image when product loads
+        setActiveImage(response.data.images?.[0] || null);
       } catch (error) {
         console.error("Error fetching product:", error);
         setError("Product not found.");
@@ -91,7 +94,7 @@ export default function ProductDetailPage() {
     return <div className={styles.notFound}>{error || "Product not found."}</div>;
   }
   const inCompare = isInCompare(product._id);
-  const imageUrl = getImageUrl(product.images?.[0]);
+  const imageUrl = getImageUrl(activeImage);
 
   const handleAddToCart = () => {
     try {
@@ -186,8 +189,33 @@ export default function ProductDetailPage() {
       </Link>
 
       <div className={styles.productGrid}>
-        <div className={styles.productImageContainer}>
-          <img src={imageUrl} alt={product.name} className={styles.productImage} />
+        <div className={styles.productImageSection}>
+          <div className={styles.productImageContainer}>
+            <img src={imageUrl} alt={product.name} className={styles.productImage} />
+          </div>
+          
+          {/* Thumbnail Gallery - Only show if multiple images exist */}
+          {product.images && product.images.length > 1 && (
+            <div className={styles.thumbnailGallery}>
+              {product.images.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveImage(image)}
+                  className={`${styles.thumbnail} ${activeImage === image ? styles.activeThumbnail : ''}`}
+                  title={`View image ${index + 1}`}
+                >
+                  <img 
+                    src={getImageUrl(image)} 
+                    alt={`${product.name} - Image ${index + 1}`}
+                    className={styles.thumbnailImage}
+                  />
+                  {index === 0 && (
+                    <span className={styles.coverBadge}>Cover</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className={styles.productDetails}>
           <p className={styles.productMeta}>{product.vendor?.username || 'Unknown Vendor'} · {product.category}</p>

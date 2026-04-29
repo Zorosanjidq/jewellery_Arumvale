@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import CustomRequest from "../models/CustomRequest.js";
 
 // Create a new order from cart
 export const createOrder = async (req, res) => {
@@ -110,11 +111,21 @@ export const createOrder = async (req, res) => {
       vendors: Array.from(vendorsMap.values()),
     });
 
-    // Update product stock
+    // Update product stock and custom requests
     for (const item of items) {
+      const product = await Product.findById(item.product);
+
+      // Update stock
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: -item.quantity },
       });
+
+      // Update custom request status if it's a custom product
+      if (product.isCustom === true && product.customRequestId) {
+        await CustomRequest.findByIdAndUpdate(product.customRequestId, {
+          status: "ordered",
+        });
+      }
     }
 
     // Clear user's cart
@@ -127,7 +138,7 @@ export const createOrder = async (req, res) => {
     // Populate order details for response
     const populatedOrder = await Order.findById(order._id)
       .populate("customer", "firstName lastName email phone")
-      .populate("items.product", "name images")
+      .populate("items.product", "name images description")
       .populate("vendors.vendor", "shopName email phone");
 
     // Convert to object and add virtual fields
@@ -191,7 +202,7 @@ export const getAllOrders = async (req, res) => {
 
     const orders = await Order.find(filter)
       .populate("customer", "firstName lastName email phone")
-      .populate("items.product", "name images")
+      .populate("items.product", "name images description")
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -235,7 +246,7 @@ export const getUserOrders = async (req, res) => {
     sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
     const orders = await Order.find(filter)
-      .populate("items.product", "name images")
+      .populate("items.product", "name images description")
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -287,7 +298,7 @@ export const getVendorOrders = async (req, res) => {
 
     const orders = await Order.find(filter)
       .populate("customer", "firstName lastName email phone")
-      .populate("items.product", "name images")
+      .populate("items.product", "name images description")
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);

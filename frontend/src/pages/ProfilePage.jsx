@@ -1,4 +1,4 @@
-import { User, Package, Heart, Settings, MapPin, Bell, ChevronRight, Star, ShoppingBag, GitCompareArrows, Eye, EyeOff } from "lucide-react";
+import { User, Package, Heart, ChevronRight, Star, ShoppingBag, GitCompareArrows, Eye, EyeOff, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +10,11 @@ const quickLinks = [{
   desc: "Track & manage orders",
   path: "/orders"
 }, {
+  icon: Palette,
+  label: "My Custom Requests",
+  desc: "Track & manage custom designs",
+  path: "/custom-requests"
+}, {
   icon: Heart,
   label: "Cart",
   desc: "See Cart items",
@@ -19,11 +24,6 @@ const quickLinks = [{
   label: "Comparisons",
   desc: "Compare products",
   path: "/compare"
-}, {
-  icon: Settings,
-  label: "Account Settings",
-  desc: "Manage your profile",
-  path: "/profile"
 }];
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -76,14 +76,6 @@ export default function ProfilePage() {
               Welcome back, {user?.firstName || 'User'}
             </h1>
            
-          </div>
-          <div className="flex gap-3">
-            <button className="p-2.5 rounded-lg bg-cream/5 text-cream/60 hover:bg-cream/10 hover:text-cream transition-colors">
-              <Bell className="h-5 w-5" />
-            </button>
-            <button className="p-2.5 rounded-lg bg-cream/5 text-cream/60 hover:bg-cream/10 hover:text-cream transition-colors">
-              <Settings className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </div>

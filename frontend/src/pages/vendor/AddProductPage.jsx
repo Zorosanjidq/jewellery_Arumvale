@@ -1,15 +1,21 @@
 import { Upload, Info, Loader2 } from "lucide-react";
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import styles from "./AddProductPage.module.css";
 
+// API base URL - following existing project pattern
+const API_BASE_URL = "http://localhost:5000/api";
+
 const categories = ["Necklace", "Ring", "Bangle", "Earrings", "Pendant", "Anklet", "Chain", "Bracelet"];
 const purities = ["24K", "22K", "18K", "14K", "925 Silver", "Platinum"];
 
 export default function AddProductPage() {
+  const { id } = useParams();
+  const isEditMode = !!id;
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -27,13 +33,68 @@ export default function AddProductPage() {
 
   const [images, setImages] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
+  const [currentProduct, setCurrentProduct] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(false);
   const [errors, setErrors] = useState({});
   
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Fetch product data for edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      fetchProductData();
+    }
+  }, [id, isEditMode]);
+
+  const fetchProductData = async () => {
+    try {
+      setFetchLoading(true);
+      const response = await axios.get(
+        `${API_BASE_URL}/products/${id}`,
+        { withCredentials: true }
+      );
+      
+      const product = response.data;
+      
+      // Store product data for publish guard
+      setCurrentProduct(product);
+      
+      // Pre-fill form data
+      setFormData({
+        name: product.name || "",
+        description: product.description || "",
+        category: product.category || "",
+        sku: product.sku || "",
+        price: product.price?.toString() || "",
+        comparePrice: product.comparePrice?.toString() || "",
+        weight: product.weight?.toString() || "",
+        purity: product.purity || "",
+        stock: product.stock?.toString() || "",
+        hallmark: product.hallmark || "",
+        tags: product.tags?.join(', ') || "",
+        status: product.status || "draft"
+      });
+      
+      // Set existing images
+      setExistingImages(product.images || []);
+      
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load product data",
+        variant: "destructive"
+      });
+      navigate("/vendor/products");
+    } finally {
+      setFetchLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,7 +165,10 @@ export default function AddProductPage() {
     if (!formData.weight || formData.weight <= 0) newErrors.weight = "Valid weight is required";
     if (!formData.purity) newErrors.purity = "Purity is required";
     if (!formData.stock || formData.stock < 0) newErrors.stock = "Valid stock quantity is required";
-    if (imageFiles.length === 0) newErrors.images = "At least one product image is required";
+    // Only require new images in create mode, or if no existing images in edit mode
+    if (!isEditMode && imageFiles.length === 0) {
+      newErrors.images = "At least one product image is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -157,8 +221,8 @@ export default function AddProductPage() {
       }
       console.log("========================");
 
-      const response = await axios.post(
-        "http://localhost:5000/api/products",
+      const response = await axios[isEditMode ? 'put' : 'post'](
+        isEditMode ? `${API_BASE_URL}/products/${id}` : `${API_BASE_URL}/products`,
         formDataToSend,
         {
           withCredentials: true,
@@ -170,16 +234,16 @@ export default function AddProductPage() {
 
       toast({
         title: "Success",
-        description: "Product created successfully!",
+        description: isEditMode ? "Product updated successfully!" : "Product created successfully!",
       });
 
       // Redirect to manage products page
       navigate("/vendor/products");
 
     } catch (error) {
-      console.error("Create product error:", error);
+      console.error(isEditMode ? "Update product error:" : "Create product error:", error);
       
-      const errorMessage = error.response?.data?.message || "Failed to create product";
+      const errorMessage = error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} product`;
       
       toast({
         title: "Error",
@@ -194,20 +258,60 @@ export default function AddProductPage() {
   const handleSaveDraft = async (e) => {
     e?.preventDefault();
     setFormData(prev => ({ ...prev, status: "draft" }));
-    await handleSubmit(e);
+    await handleSubmit(e, "draft");
   };
 
   const handlePublish = async (e) => {
     e?.preventDefault();
+    
+    // Calculate total images (existing + newly uploaded)
+    const totalImageCount = existingImages.length + imageFiles.length;
+    
+    // Publish guard for converted custom products
+    // Backend will handle cleanup and validation, but we provide early feedback
+    if (isEditMode && currentProduct?.isCustom && currentProduct?.customRequestId) {
+      if (totalImageCount === 1) {
+        toast({
+          title: "Cannot Publish",
+          description: "Upload actual product photos before publishing this converted product.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Inform user that reference image will be removed
+      if (totalImageCount > 1) {
+        toast({
+          title: "Publishing Custom Product",
+          description: "Original customer reference image will be removed. Only vendor photos will be shown.",
+          variant: "default"
+        });
+      }
+    }
+    
     setFormData(prev => ({ ...prev, status: "active" }));
     await handleSubmit(e, "active");
   };
 
+  // Show loading state when fetching product data in edit mode
+  if (fetchLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <Loader2 className="animate-spin" />
+          <p>Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.pageTitle}>Add New Product</h1>
-        <p className={styles.pageSubtitle}>Fill in the details to list a new product on your store.</p>
+        <h1 className={styles.pageTitle}>{isEditMode ? "Edit Product" : "Add New Product"}</h1>
+        <p className={styles.pageSubtitle}>
+          {isEditMode ? "Update your product details below." : "Fill in the details to list a new product on your store."}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.threeColumnGrid}>

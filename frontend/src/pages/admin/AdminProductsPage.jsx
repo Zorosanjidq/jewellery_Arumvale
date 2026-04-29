@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Eye, Ban, Star, Loader2, X } from "lucide-react";
+import { Search, Filter, Eye, Ban, Star, Loader2, X, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import axios from "axios";
 import styles from "./AdminProductsPage.module.css";
 
@@ -11,6 +12,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -51,7 +53,16 @@ export default function AdminProductsPage() {
     fetchProducts();
   }, []);
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    
+    if (statusFilter === "all") return matchesSearch;
+    if (statusFilter === "active") return matchesSearch && p.status === "active";
+    if (statusFilter === "draft") return matchesSearch && p.status === "draft";
+    if (statusFilter === "blocked") return matchesSearch && p.status === "blocked";
+    
+    return matchesSearch;
+  });
 
   const handleViewProduct = async (product) => {
     try {
@@ -135,10 +146,38 @@ export default function AdminProductsPage() {
             <CardTitle className={styles.tableTitle}>All Products</CardTitle>
             <div className={styles.tableActions}>
               <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} />
-                <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className={styles.searchInput} />
-              </div>
-              <Button variant="outline" size="sm" className={styles.filterButton}><Filter className="h-3.5 w-3.5" /> Filter</Button>
+                <div className="flex items-center gap-2">
+                  <Search className={styles.searchIcon} />
+                  <Input 
+                    placeholder="Search products..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className={styles.searchInput} 
+                  />
+                </div>
+                </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={styles.filterButton}>
+                    <Filter className="h-3.5 w-3.5" /> Filter
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Products
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("active")}>
+                    Active Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("draft")}>
+                    Draft Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("blocked")}>
+                    Blocked Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
@@ -175,10 +214,10 @@ export default function AdminProductsPage() {
                           <p className={styles.productPurity}>{p.purity}</p>
                           <div className={styles.statusBadgeContainer}>
                             <Badge 
-                              variant={p.status === "active" ? "default" : "secondary"}
-                              className={`${styles.statusBadge} ${p.status === "draft" ? styles.blockedBadge : ""}`}
+                              variant={p.status === "active" ? "default" : p.status === "blocked" ? "destructive" : "secondary"}
+                              className={`${styles.statusBadge} ${p.status === "blocked" ? styles.blockedBadge : ""}`}
                             >
-                              {p.status === "active" ? "Active" : "Blocked"}
+                              {p.status === "active" ? "Active" : p.status === "blocked" ? "Blocked" : "Draft"}
                             </Badge>
                           </div>
                         </div>
@@ -210,10 +249,10 @@ export default function AdminProductsPage() {
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
-                          className={`${styles.actionButton} ${p.status === "draft" ? styles.unblockButton : styles.danger}`}
-                          onClick={() => handleToggleProductStatus(p)}
-                          disabled={actionLoading}
-                          title={p.status === "active" ? "Block Product" : "Unblock Product"}
+                          className={`${styles.actionButton} ${p.status === "blocked" ? styles.danger : ""}`}
+                          onClick={() => p.status !== "draft" && handleToggleProductStatus(p)}
+                          disabled={actionLoading || p.status === "draft"}
+                          title={p.status === "active" ? "Block Product" : p.status === "blocked" ? "Unblock Product" : "Draft Product - Cannot Moderate"}
                         >
                           <Ban className="h-4 w-4" />
                         </button>
@@ -286,8 +325,8 @@ export default function AdminProductsPage() {
                   </div>
                   <div className={styles.detailRow}>
                     <span className={styles.label}>Status:</span>
-                    <Badge variant={selectedProduct.status === "active" ? "default" : "secondary"}>
-                      {selectedProduct.status === "active" ? "Active" : "Blocked"}
+                    <Badge variant={selectedProduct.status === "active" ? "default" : selectedProduct.status === "blocked" ? "destructive" : "secondary"}>
+                      {selectedProduct.status === "active" ? "Active" : selectedProduct.status === "blocked" ? "Blocked" : "Draft"}
                     </Badge>
                   </div>
                   <div className={styles.detailRow}>

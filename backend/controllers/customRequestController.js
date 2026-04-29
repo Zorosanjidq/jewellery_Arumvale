@@ -1,6 +1,97 @@
 import CustomRequest from "../models/CustomRequest.js";
 import User from "../models/User.js";
 import Product from "../models/Product.js";
+import Vendor from "../models/Vendor.js";
+
+// Get current user's custom requests
+export const getMyCustomRequests = async (req, res) => {
+  try {
+    const requests = await CustomRequest.find({ customer: req.user._id })
+      .populate("vendor", "username firstName lastName")
+      .sort({ createdAt: -1 });
+
+    // Lookup vendor profiles to get shop names
+    const vendorIds = requests.map((req) => req.vendor._id);
+    const vendorProfiles = await Vendor.find({
+      user: { $in: vendorIds },
+    }).select("user shopName shopType");
+
+    // Map vendor profiles to requests
+    const requestsWithVendorInfo = requests.map((request) => {
+      const vendorProfile = vendorProfiles.find(
+        (vp) => vp.user.toString() === request.vendor._id.toString(),
+      );
+      return {
+        ...request.toObject(),
+        vendor: {
+          ...(request.vendor && typeof request.vendor.toObject === "function"
+            ? request.vendor.toObject()
+            : request.vendor),
+          shopName: vendorProfile?.shopName || "Unknown Vendor",
+          shopType: vendorProfile?.shopType,
+        },
+      };
+    });
+
+    res.json(requestsWithVendorInfo);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get current vendor's custom requests
+export const getVendorCustomRequests = async (req, res) => {
+  try {
+    // Build query filter
+    const filter = { vendor: req.user._id };
+
+    // Add status filter if provided (supports both single and comma-separated)
+    if (req.query.status) {
+      const statuses = req.query.status.split(",").map((s) => s.trim());
+      if (statuses.length === 1) {
+        // Single status filter (preserves existing behavior)
+        filter.status = statuses[0];
+      } else {
+        // Multi-status filter
+        filter.status = { $in: statuses };
+      }
+    }
+
+    const requests = await CustomRequest.find(filter)
+      .populate("customer", "username firstName lastName")
+      .sort({ createdAt: -1 });
+
+    // Lookup vendor profiles to get shop names
+    const vendorIds = requests.map((req) => req.vendor._id).filter(Boolean);
+    const vendorProfiles =
+      vendorIds.length > 0
+        ? await Vendor.find({
+            user: { $in: vendorIds },
+          }).select("user shopName shopType")
+        : [];
+
+    // Map vendor profiles to requests
+    const requestsWithVendorInfo = requests.map((request) => {
+      const vendorProfile = vendorProfiles.find(
+        (vp) => vp.user.toString() === request.vendor._id.toString(),
+      );
+      return {
+        ...request.toObject(),
+        vendor: {
+          ...(request.vendor && typeof request.vendor.toObject === "function"
+            ? request.vendor.toObject()
+            : request.vendor),
+          shopName: vendorProfile?.shopName || "Unknown Vendor",
+          shopType: vendorProfile?.shopType,
+        },
+      };
+    });
+
+    res.json(requestsWithVendorInfo);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Create a new custom request (customers only)
 export const createCustomRequest = async (req, res) => {
@@ -227,22 +318,148 @@ export const convertToProduct = async (req, res) => {
       });
     }
 
-    // Create custom product with derived data
-    const productData = {
-      name: request.title,
-      description: request.description,
-      category: "Custom", // Default category for custom products
-      price: request.estimate.price,
-      weight: 0, // Default weight - vendor can update later
-      purity: "22K", // Default purity - vendor can update later
-      stock: 1, // Custom product - single item
-      images: [request.designImage], // Use design image as product image
-      vendor: request.vendor,
-      status: "draft", // Start as draft, vendor activates when ready
-      isCustom: true,
-      customForCustomer: request.customer,
-      customRequestId: request._id,
-    };
+    // Detect mode: NEW MODE if any product fields present, LEGACY MODE otherwise
+    const isNewMode =
+      req.body &&
+      (req.body.productName ||
+        req.body.productDescription ||
+        req.body.category ||
+        req.body.purity ||
+        req.body.weight ||
+        req.body.stock ||
+        req.body.price);
+
+    let productData;
+
+    if (isNewMode) {
+      // NEW MODE: Use form data with strict validation
+      const {
+        productName,
+        productDescription,
+        category,
+        purity,
+        weight,
+        stock,
+        price,
+      } = req.body;
+
+      // Validation rules
+      const errors = {};
+
+      // Required fields validation
+      if (!productName || !productName.trim()) {
+        errors.productName = "Product name is required";
+      }
+      if (!productDescription || !productDescription.trim()) {
+        errors.productDescription = "Product description is required";
+      }
+      if (!category) {
+        errors.category = "Product category is required";
+      }
+      if (!purity) {
+        errors.purity = "Product purity is required";
+      }
+      if (!weight || isNaN(weight) || parseFloat(weight) <= 0) {
+        errors.weight = "Weight must be a positive number";
+      }
+      if (!stock || isNaN(stock) || parseInt(stock) < 1) {
+        errors.stock = "Stock must be at least 1";
+      }
+      if (!price || isNaN(price) || parseFloat(price) <= 0) {
+        errors.price = "Price must be a positive number";
+      }
+
+      // Enum validation for category
+      const validCategories = [
+        "Necklace",
+        "Ring",
+        "Bangle",
+        "Earrings",
+        "Pendant",
+        "Anklet",
+        "Chain",
+        "Bracelet",
+      ];
+      if (category && !validCategories.includes(category)) {
+        errors.category =
+          "Invalid category. Must be one of: " + validCategories.join(", ");
+      }
+
+      // Enum validation for purity
+      const validPurities = [
+        "24K",
+        "22K",
+        "18K",
+        "14K",
+        "925 Silver",
+        "Platinum",
+      ];
+      if (purity && !validPurities.includes(purity)) {
+        errors.purity =
+          "Invalid purity. Must be one of: " + validPurities.join(", ");
+      }
+
+      // Return validation errors if any
+      if (Object.keys(errors).length > 0) {
+        return res.status(400).json({
+          message: "Validation failed",
+          errors,
+        });
+      }
+
+      // Create product with form data
+      productData = {
+        name: productName.trim(),
+        description: productDescription.trim(),
+        category,
+        price: parseFloat(price),
+        weight: parseFloat(weight),
+        purity,
+        stock: parseInt(stock),
+        images: [request.designImage],
+        vendor: request.vendor,
+        status: "draft",
+        isCustom: true,
+        customForCustomer: request.customer,
+        customRequestId: request._id,
+      };
+    } else {
+      // LEGACY MODE: Use request data with safe fallbacks
+      if (!request.estimate || !request.estimate.price) {
+        return res.status(400).json({
+          message:
+            "Legacy mode requires request to have an approved estimate with price",
+        });
+      }
+
+      // Infer category from title if possible, else use safe default
+      let inferredCategory = "Pendant"; // Safe default
+      const title = request.title.toLowerCase();
+      if (title.includes("ring")) inferredCategory = "Ring";
+      else if (title.includes("necklace")) inferredCategory = "Necklace";
+      else if (title.includes("bangle")) inferredCategory = "Bangle";
+      else if (title.includes("earring")) inferredCategory = "Earrings";
+      else if (title.includes("anklet")) inferredCategory = "Anklet";
+      else if (title.includes("chain")) inferredCategory = "Chain";
+      else if (title.includes("bracelet")) inferredCategory = "Bracelet";
+
+      // Create product with legacy data and minimal safe values
+      productData = {
+        name: request.title,
+        description: request.description,
+        category: inferredCategory,
+        price: request.estimate.price,
+        weight: 1, // Minimal safe weight instead of 0
+        purity: "22K", // Fallback purity
+        stock: 1, // Default stock
+        images: [request.designImage],
+        vendor: request.vendor,
+        status: "draft",
+        isCustom: true,
+        customForCustomer: request.customer,
+        customRequestId: request._id,
+      };
+    }
 
     // Create product
     const product = await Product.create(productData);
