@@ -22,6 +22,9 @@ import CustomRequestsPage from "./pages/CustomRequestsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import VendorRegisterPage from "./pages/VendorRegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import VerifyOtpPage from "./pages/VerifyOtpPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import AddProductPage from "./pages/vendor/AddProductPage";
 import ManageProductsPage from "./pages/vendor/ManageProductsPage";
@@ -65,6 +68,9 @@ const App = () => <QueryClientProvider client={queryClient}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/register/vendor" element={<VendorRegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/verify-otp" element={<VerifyOtpPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Vendor */}
             <Route element={<VendorLayout />}>

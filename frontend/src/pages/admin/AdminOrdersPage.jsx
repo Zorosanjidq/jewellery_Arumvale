@@ -416,23 +416,6 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                {selectedOrder.trackingNumber && (
-                  <div className={styles.infoSection}>
-                    <h4>Tracking Information</h4>
-                    <div className={styles.trackingInfo}>
-                      <div className={styles.infoItem}>
-                        <span className={styles.label}>Tracking Number:</span>
-                        <span>{selectedOrder.trackingNumber}</span>
-                      </div>
-                      {selectedOrder.estimatedDelivery && (
-                        <div className={styles.infoItem}>
-                          <span className={styles.label}>Estimated Delivery:</span>
-                          <span>{formatDate(selectedOrder.estimatedDelivery)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {selectedOrder.adminNotes && (
                   <div className={styles.infoSection}>

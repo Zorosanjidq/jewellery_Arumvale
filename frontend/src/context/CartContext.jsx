@@ -74,10 +74,13 @@ const initialState = {
 
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
 
   // Load cart from localStorage on mount and when login status changes
   useEffect(() => {
+    // Don't do anything while auth is loading
+    if (loading) return;
+    
     if (isLoggedIn) {
       const savedCart = localStorage.getItem(`cart_${isLoggedIn.user?._id}`);
       if (savedCart) {
@@ -92,7 +95,7 @@ export const CartProvider = ({ children }) => {
       // Clear cart when logged out
       dispatch({ type: CART_ACTIONS.CLEAR_CART });
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, loading]);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {

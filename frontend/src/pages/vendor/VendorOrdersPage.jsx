@@ -58,7 +58,6 @@ export default function VendorOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [updatingOrders, setUpdatingOrders] = useState(new Set());
   const [orderStatuses, setOrderStatuses] = useState({});
-  const [trackingNumbers, setTrackingNumbers] = useState({});
 
   const fetchOrders = async (search = '', status = '') => {
     try {
@@ -78,15 +77,12 @@ export default function VendorOrdersPage() {
       setAllOrders(fetchedOrders);
       setOrders(fetchedOrders);
       
-      // Initialize order statuses and tracking numbers
+      // Initialize order statuses
       const initialStatuses = {};
-      const initialTracking = {};
       fetchedOrders.forEach(order => {
         initialStatuses[order._id] = order.vendorStatus || order.status || 'pending';
-        initialTracking[order._id] = order.vendorTrackingNumber || order.trackingNumber || '';
       });
       setOrderStatuses(initialStatuses);
-      setTrackingNumbers(initialTracking);
     } catch (error) {
       console.error('Error fetching vendor orders:', error);
       setError(error.response?.data?.message || 'Failed to load orders');
@@ -113,20 +109,16 @@ export default function VendorOrdersPage() {
     setOrderStatuses(prev => ({ ...prev, [orderId]: newStatus }));
   };
 
-  const handleTrackingChange = (orderId, trackingNumber) => {
-    setTrackingNumbers(prev => ({ ...prev, [orderId]: trackingNumber }));
-  };
 
   const updateOrderStatus = async (orderId) => {
     try {
       setUpdatingOrders(prev => new Set(prev).add(orderId));
       
       const status = orderStatuses[orderId];
-      const trackingNumber = trackingNumbers[orderId];
       
       const response = await axios.put(
         `http://localhost:5000/api/orders/${orderId}/status`,
-        { status, trackingNumber },
+        { status },
         { withCredentials: true }
       );
       
@@ -316,19 +308,8 @@ export default function VendorOrdersPage() {
                         ))}
                       </select>
                       
-                      {(orderStatuses[o._id] === 'shipped' || orderStatus === 'shipped') && (
-                        <input 
-                          type="text"
-                          placeholder="Tracking #"
-                          value={trackingNumbers[o._id] || ''}
-                          onChange={(e) => handleTrackingChange(o._id, e.target.value)}
-                          className={styles.trackingInput}
-                          disabled={updatingOrders.has(o._id)}
-                        />
-                      )}
                       
-                      {(orderStatuses[o._id] !== orderStatus || 
-                        (orderStatuses[o._id] === 'shipped' && trackingNumbers[o._id] !== (o.vendorTrackingNumber || o.trackingNumber))) && (
+                      {(orderStatuses[o._id] !== orderStatus) && (
                         <button 
                           onClick={() => updateOrderStatus(o._id)}
                           disabled={updatingOrders.has(o._id)}

@@ -13,6 +13,7 @@ import cartRoutes from "./routes/cartRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import customRequestRoutes from "./routes/customRequestRoutes.js";
+import emailRoutes from "./routes/emailRoutes.js";
 import { serveStaticFiles } from "./utils/uploadConfig.js";
 import "./models/User.js";
 import "./models/Vendor.js";
@@ -52,6 +53,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.use("/api/custom-requests", customRequestRoutes);
+
+app.use("/api/email", emailRoutes);
 
 // Serve static files for uploaded images
 serveStaticFiles(app);

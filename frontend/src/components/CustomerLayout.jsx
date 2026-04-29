@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Home, Search, BarChart3, ShoppingCart, Package, User, Menu, X, LogIn, UserPlus, LogOut, Palette } from "lucide-react";
 import { useCompare } from "@/context/CompareContext";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import styles from "./CustomerLayout.module.css";
@@ -41,6 +42,7 @@ export default function CustomerLayout() {
     isLoggedIn,
     logout
   } = useAuth();
+  const { getCartItemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const handleLogout = async () => {
     await logout();
@@ -66,6 +68,9 @@ export default function CustomerLayout() {
                   {item.label}
                   {item.label === "Compare" && compareItems.length > 0 && <span className="ml-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                       {compareItems.length}
+                    </span>}
+                  {item.label === "Cart" && isLoggedIn && getCartItemCount() > 0 && <span className="ml-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                      {getCartItemCount()}
                     </span>}
                 </Link>;
           })}
@@ -159,6 +164,12 @@ export default function CustomerLayout() {
           return <Link key={item.path} to={item.path} onClick={() => setMobileMenuOpen(false)} className={`${styles.mobileMenuLink} ${active ? styles.active : ''}`}>
                   <item.icon className="h-4 w-4" />
                   {item.label}
+                  {item.label === "Compare" && compareItems.length > 0 && <span className="ml-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                      {compareItems.length}
+                    </span>}
+                  {item.label === "Cart" && isLoggedIn && getCartItemCount() > 0 && <span className="ml-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                      {getCartItemCount()}
+                    </span>}
                 </Link>;
         })}
             <div className="border-t border-border my-2 pt-2">

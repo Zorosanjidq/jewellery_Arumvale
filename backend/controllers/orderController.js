@@ -380,7 +380,7 @@ export const getOrderById = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, trackingNumber, adminNotes } = req.body;
+    const { status, adminNotes } = req.body;
 
     const order = await Order.findById(id).populate("vendors.vendor");
 
@@ -427,7 +427,6 @@ export const updateOrderStatus = async (req, res) => {
         break;
       case "shipped":
         order.shippedDate = now;
-        order.trackingNumber = trackingNumber || order.trackingNumber;
         break;
       case "delivered":
         order.deliveredDate = now;
@@ -456,7 +455,6 @@ export const updateOrderStatus = async (req, res) => {
       );
       if (vendorIndex !== -1) {
         order.vendors[vendorIndex].status = status;
-        order.vendors[vendorIndex].trackingNumber = trackingNumber;
       }
     }
 

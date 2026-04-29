@@ -109,6 +109,19 @@ const userSchema = new mongoose.Schema(
         ref: "Order",
       },
     ],
+    passwordResetOTP: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    passwordResetVerified: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
   },
   {
     timestamps: true,
